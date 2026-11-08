@@ -13,14 +13,16 @@ class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
         PrayerRepo.refresh(applicationContext)
         Alarms.scheduleNext(applicationContext)
         Alarms.updateStatus(applicationContext)
+        PrayerWidget.refreshAll(applicationContext)
         return Result.success()
     }
 
     companion object {
-        /** Refreshes the cached calendar every 6 hours, and works offline from the cache. */
+        /** Refreshes the cached calendar at the interval set in settings (6, 12 or 24 hours). */
         fun schedule(ctx: Context) {
-            val req = PeriodicWorkRequestBuilder<RefreshWorker>(6, TimeUnit.HOURS).build()
-            WorkManager.getInstance(ctx).enqueueUniquePeriodicWork("prayer-refresh", ExistingPeriodicWorkPolicy.KEEP, req)
+            val hours = AppSettings.refreshHours(ctx).toLong()
+            val req = PeriodicWorkRequestBuilder<RefreshWorker>(hours, TimeUnit.HOURS).build()
+            WorkManager.getInstance(ctx).enqueueUniquePeriodicWork("prayer-refresh", ExistingPeriodicWorkPolicy.UPDATE, req)
         }
     }
 }

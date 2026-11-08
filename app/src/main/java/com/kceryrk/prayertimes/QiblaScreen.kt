@@ -6,10 +6,11 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +21,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -42,7 +49,7 @@ fun qiblaBearing(lat: Double, lon: Double): Float {
 }
 
 @Composable
-fun QiblaScreen(onBack: () -> Unit) {
+fun QiblaScreen() {
     val ctx = LocalContext.current
     val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     val gps = PrayerRepo.savedGps(ctx)
@@ -64,13 +71,43 @@ fun QiblaScreen(onBack: () -> Unit) {
         onDispose { sm.unregisterListener(listener) }
     }
 
-    Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        Modifier.fillMaxSize().padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 120.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(stringResource(R.string.qibla), style = MaterialTheme.typography.headlineMedium)
         if (gps == null) {
             Text(stringResource(R.string.qibla_needs_gps))
         } else {
             val target = qiblaBearing(gps.first, gps.second)
             val diff = ((target - heading + 540) % 360) - 180
+            val ringColor = MaterialTheme.colorScheme.outline
+            val accent = Color(AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB))
+            Canvas(Modifier.padding(top = 24.dp).size(260.dp)) {
+                val c = center
+                val r = size.minDimension / 2
+                drawCircle(color = ringColor.copy(alpha = 0.15f), radius = r)
+                drawCircle(color = ringColor, radius = r, style = Stroke(2.dp.toPx()))
+                // Dial rotates opposite to the device heading so north stays on the real north.
+                rotate(-heading, c) {
+                    for (deg in 0 until 360 step 15) {
+                        val rad = Math.toRadians(deg.toDouble())
+                        val len = if (deg % 90 == 0) 16.dp.toPx() else 8.dp.toPx()
+                        val outer = Offset(c.x + (r * sin(rad)).toFloat(), c.y - (r * cos(rad)).toFloat())
+                        val inner = Offset(c.x + ((r - len) * sin(rad)).toFloat(), c.y - ((r - len) * cos(rad)).toFloat())
+                        drawLine(ringColor, outer, inner, strokeWidth = 2.dp.toPx())
+                    }
+                    // North tick, drawn in red so the real north is easy to spot.
+                    drawLine(Color.Red, Offset(c.x, c.y - r + 2.dp.toPx()), Offset(c.x, c.y - r + 18.dp.toPx()), strokeWidth = 4.dp.toPx())
+                }
+                // Qibla needle: points at the Kaaba bearing relative to the device.
+                rotate(-heading + target, c) {
+                    val tip = Offset(c.x, c.y - r * 0.75f)
+                    drawLine(accent, c, tip, strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
+                    drawCircle(accent, radius = 10.dp.toPx(), center = tip)
+                }
+                drawCircle(color = Color.White, radius = 6.dp.toPx(), center = c)
+            }
             Text(stringResource(R.string.qibla_degrees, target.toInt()))
             Text(
                 stringResource(if (kotlin.math.abs(diff) < 5) R.string.qibla_aligned else R.string.qibla_turn, diff.toInt()),
@@ -78,6 +115,5 @@ fun QiblaScreen(onBack: () -> Unit) {
             )
             Text(stringResource(R.string.qibla_note))
         }
-        Button(onClick = onBack) { Text(stringResource(R.string.back)) }
     }
 }

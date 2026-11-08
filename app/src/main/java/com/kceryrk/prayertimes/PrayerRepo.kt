@@ -22,11 +22,10 @@ enum class Prayer(val apiKey: String, val labelRes: Int, val notify: Boolean) {
 data class Upcoming(val at: LocalDateTime, val prayer: Prayer)
 
 /**
- * Fetches monthly prayer calendars from Aladhan and caches the raw JSON per location and month,
- * so the times still work offline. Method 13 is Diyanet (Turkey).
+ * Fetches monthly prayer calendars from Aladhan and caches the raw JSON per location, method and month,
+ * so the times still work offline. The calculation method comes from settings (default 13, Diyanet).
  */
 object PrayerRepo {
-    private const val METHOD = 13
     private const val API = "https://api.aladhan.com/v1"
     private const val PREFS = "prayer_times"
     private const val KEY_MODE = "mode"   // "gps" or "city"
@@ -44,6 +43,12 @@ object PrayerRepo {
         prefs(ctx).edit().putString(KEY_MODE, "city").putString(KEY_CITY, "$city|$country").apply()
     }
 
+    fun setGpsMode(ctx: Context, gps: Boolean) {
+        prefs(ctx).edit().putString(KEY_MODE, if (gps) "gps" else "city").apply()
+    }
+
+    fun isGpsMode(ctx: Context): Boolean = prefs(ctx).getString(KEY_MODE, "gps") == "gps"
+
     fun savedGps(ctx: Context): Pair<Double, Double>? {
         val (lat, lon) = prefs(ctx).getString(KEY_GPS, null)?.split(",") ?: return null
         return lat.toDouble() to lon.toDouble()
@@ -56,25 +61,25 @@ object PrayerRepo {
         val p = prefs(ctx)
         val gps = p.getString(KEY_GPS, null)
         val city = p.getString(KEY_CITY, null)
-        return if (p.getString(KEY_MODE, "gps") == "gps" && gps != null) "gps:$gps"
+        return if (isGpsMode(ctx) && gps != null) "gps:$gps"
         else city?.let { "city:$it" } ?: gps?.let { "gps:$it" }
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
 
-    private fun url(src: String, ym: YearMonth): String {
+    private fun url(src: String, ym: YearMonth, method: Int): String {
         val kind = src.substringBefore(':')
         val value = src.substringAfter(':')
         return if (kind == "gps") {
             val (lat, lon) = value.split(",")
-            "$API/calendar/${ym.year}/${ym.monthValue}?latitude=$lat&longitude=$lon&method=$METHOD"
+            "$API/calendar/${ym.year}/${ym.monthValue}?latitude=$lat&longitude=$lon&method=$method"
         } else {
             val (city, country) = value.split("|")
-            "$API/calendarByCity/${ym.year}/${ym.monthValue}?city=${enc(city)}&country=${enc(country)}&method=$METHOD"
+            "$API/calendarByCity/${ym.year}/${ym.monthValue}?city=${enc(city)}&country=${enc(country)}&method=$method"
         }
     }
 
-    private fun cacheKey(src: String, ym: YearMonth) = "cache_${src}_$ym"
+    private fun cacheKey(ctx: Context, src: String, ym: YearMonth) = "cache_${src}_m${AppSettings.method(ctx)}_$ym"
 
     private fun download(url: String): String? = try {
         val conn = URL(url).openConnection() as HttpURLConnection
@@ -93,18 +98,19 @@ object PrayerRepo {
     fun refresh(ctx: Context): Boolean {
         val src = source(ctx) ?: return false
         val now = YearMonth.now()
+        val method = AppSettings.method(ctx)
         var ok = true
         val edit = prefs(ctx).edit()
         for (ym in listOf(now, now.plusMonths(1))) {
-            val body = download(url(src, ym))
-            if (body != null) edit.putString(cacheKey(src, ym), body) else ok = false
+            val body = download(url(src, ym, method))
+            if (body != null) edit.putString(cacheKey(ctx, src, ym), body) else ok = false
         }
         edit.putBoolean(KEY_OK, ok).apply()
         return ok
     }
 
     private fun days(ctx: Context, src: String, ym: YearMonth): Map<LocalDate, Map<Prayer, LocalTime>> {
-        val body = prefs(ctx).getString(cacheKey(src, ym), null) ?: return emptyMap()
+        val body = prefs(ctx).getString(cacheKey(ctx, src, ym), null) ?: return emptyMap()
         val data = JSONObject(body).getJSONArray("data")
         val out = HashMap<LocalDate, Map<Prayer, LocalTime>>()
         for (i in 0 until data.length()) {
@@ -121,12 +127,13 @@ object PrayerRepo {
         return days(ctx, src, YearMonth.now())[LocalDate.now()]
     }
 
-    /** Next prayer after [now]. With [adhanOnly], Sunrise is skipped. */
+    /** Next prayer after [now]. With [adhanOnly], Sunrise and prayers with alarms turned off are skipped. */
     fun upcoming(ctx: Context, now: LocalDateTime = LocalDateTime.now(), adhanOnly: Boolean = false): Upcoming? {
         val src = source(ctx) ?: return null
         val all = days(ctx, src, YearMonth.from(now)) + days(ctx, src, YearMonth.from(now.plusDays(1)))
         return all.flatMap { (date, times) ->
-            times.filter { !adhanOnly || it.key.notify }.map { (prayer, time) -> Upcoming(LocalDateTime.of(date, time), prayer) }
+            times.filter { !adhanOnly || (it.key.notify && AppSettings.alarmOn(ctx, it.key)) }
+                .map { (prayer, time) -> Upcoming(LocalDateTime.of(date, time), prayer) }
         }.filter { it.at.isAfter(now) }.minByOrNull { it.at }
     }
 }

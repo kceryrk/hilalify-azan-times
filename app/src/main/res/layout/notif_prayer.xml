@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/notif_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:background="#00000000">
+
+    <TextView
+        android:id="@+id/notif_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#FFFFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:shadowColor="#CC000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="4" />
+
+    <TextView
+        android:id="@+id/notif_next"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#FFFFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:shadowColor="#CC000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="4" />
+
+    <TextView
+        android:id="@+id/notif_countdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#FFFFFFFF"
+        android:textSize="14sp"
+        android:shadowColor="#CC000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="4" />
+
+    <LinearLayout
+        android:id="@+id/notif_times"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="vertical">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/notif_l0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFFFF" android:textSize="14sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+            <TextView android:id="@+id/notif_t0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="14sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/notif_l1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFFFF" android:textSize="14sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+            <TextView android:id="@+id/notif_t1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="14sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/notif_l2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFFFF" android:textSize="14sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+            <TextView android:id="@+id/notif_t2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="14sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/notif_l3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFFFF" android:textSize="14sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+            <TextView android:id="@+id/notif_t3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="14sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/notif_l4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFFFF" android:textSize="14sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+            <TextView android:id="@+id/notif_t4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="14sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/notif_l5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFFFF" android:textSize="14sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+            <TextView android:id="@+id/notif_t5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="14sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/notif_columns"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical"><TextView android:id="@+id/notif_cl0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="10sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /><TextView android:id="@+id/notif_ct0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /></LinearLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical"><TextView android:id="@+id/notif_cl1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="10sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /><TextView android:id="@+id/notif_ct1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /></LinearLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical"><TextView android:id="@+id/notif_cl2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="10sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /><TextView android:id="@+id/notif_ct2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /></LinearLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical"><TextView android:id="@+id/notif_cl3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="10sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /><TextView android:id="@+id/notif_ct3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /></LinearLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical"><TextView android:id="@+id/notif_cl4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="10sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /><TextView android:id="@+id/notif_ct4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /></LinearLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical"><TextView android:id="@+id/notif_cl5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="10sp" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /><TextView android:id="@+id/notif_ct5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="4" /></LinearLayout>
+    </LinearLayout>
+</LinearLayout>
