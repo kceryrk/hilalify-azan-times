@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hilal\'ify : Azan Times</string>
+    <string name="prayer_fajr">İmsak</string>
+    <string name="prayer_sunrise">Güneş</string>
+    <string name="prayer_dhuhr">Öğle</string>
+    <string name="prayer_asr">İkindi</string>
+    <string name="prayer_maghrib">Akşam</string>
+    <string name="prayer_isha">Yatsı</string>
+    <string name="channel_adhan">Ezan</string>
+    <string name="channel_status">Sonraki vakit geri sayımı</string>
+    <string name="adhan_title">%1$s vakti girdi</string>
+    <string name="adhan_text">Namaz vakti geldi.</string>
+    <string name="status_countdown">%1$s: %2$d dk kaldı</string>
+    <string name="next_prayer">Sonraki: %1$s</string>
+    <string name="in_time">%1$dsa %2$02ddk sonra</string>
+    <string name="no_times">Vakitler henüz alınamadı</string>
+    <string name="set_city">Şehir seç</string>
+    <string name="city">Şehir</string>
+    <string name="country">Ülke</string>
+    <string name="save">Kaydet</string>
+    <string name="cancel">İptal</string>
+    <string name="qibla">Kıble</string>
+    <string name="qibla_needs_gps">Kıble yönü için konum gerekli.</string>
+    <string name="qibla_degrees">Kıble açısı: %1$d°</string>
+    <string name="qibla_aligned">Kıble yönündesiniz</string>
+    <string name="qibla_turn">%1$d° çevirin</string>
+    <string name="qibla_note">Pusula doğruluğu telefon sensörlerine ve kalibrasyona bağlıdır.</string>
+    <string name="back">Geri</string>
+    <string name="updating">Güncelleniyor…</string>
+    <string name="offline">Çevrimdışı: önbellekteki vakitler gösteriliyor</string>
+    <string name="widget_description">Sonraki vakit ve bugünkü vakitler</string>
+</resources>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hilal\'ify : Azan Times</string>
+    <string name="prayer_fajr">Fajr</string>
+    <string name="prayer_sunrise">Sunrise</string>
+    <string name="prayer_dhuhr">Dhuhr</string>
+    <string name="prayer_asr">Asr</string>
+    <string name="prayer_maghrib">Maghrib</string>
+    <string name="prayer_isha">Isha</string>
+    <string name="channel_adhan">Adhan</string>
+    <string name="channel_status">Next prayer countdown</string>
+    <string name="adhan_title">Time for %1$s</string>
+    <string name="adhan_text">It is time for prayer.</string>
+    <string name="status_countdown">%1$s in %2$d min</string>
+    <string name="next_prayer">Next: %1$s</string>
+    <string name="in_time">in %1$dh %2$02dm</string>
+    <string name="no_times">Prayer times not available yet</string>
+    <string name="set_city">Set city</string>
+    <string name="city">City</string>
+    <string name="country">Country</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="qibla">Qibla</string>
+    <string name="qibla_needs_gps">Location is needed for the Qibla direction.</string>
+    <string name="qibla_degrees">Qibla bearing: %1$d°</string>
+    <string name="qibla_aligned">Facing Qibla</string>
+    <string name="qibla_turn">Turn %1$d°</string>
+    <string name="qibla_note">Compass accuracy depends on the phone sensors and calibration.</string>
+    <string name="back">Back</string>
+    <string name="updating">Updating…</string>
+    <string name="offline">Offline: showing cached times</string>
+    <string name="widget_description">Next prayer and today\'s times</string>
+</resources>
