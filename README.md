@@ -91,3 +91,9 @@ Open the project in Android Studio and run the `app` configuration on a device o
 ## Notes
 - Background GPS for location updates while the app is closed is not implemented yet.
 - Blur on dialogs uses RenderEffect and needs Android 13 (API 33) or newer. Older versions show the dialog without the blur.
+
+## Acknowledgements
+- The floating navigation pill and icon tint take design inspiration from [Mornye](https://github.com/mornyeapp/Mornye), an open-source music app by its developers. Mornye is licensed under LGPL-3.0.
+
+## License
+This project is released under the [MIT License](LICENSE).
