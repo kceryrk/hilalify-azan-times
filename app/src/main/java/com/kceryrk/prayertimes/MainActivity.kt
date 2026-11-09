@@ -156,6 +156,13 @@ class MainActivity : ComponentActivity() {
             )
             MaterialTheme(colorScheme = scheme) {
                 Surface(Modifier.fillMaxSize()) {
+                    var availableUpdate by remember { mutableStateOf<UpdateInfo?>(null) }
+                    LaunchedEffect(Unit) {
+                        if (AppSettings.updatesEnabled(this@MainActivity)) {
+                            availableUpdate = UpdateChecker.check(this@MainActivity)
+                        }
+                    }
+                    availableUpdate?.let { UpdateDialog(it) { availableUpdate = null } }
                     MainScreen()
                 }
             }

@@ -31,6 +31,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
@@ -39,7 +40,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -197,6 +202,34 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
 
         Section(R.string.sec_about) {
             val version = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "1.0"
+            val scope = rememberCoroutineScope()
+            var checking by remember { mutableStateOf(false) }
+            var checkMessage by remember { mutableStateOf<String?>(null) }
+            var update by remember { mutableStateOf<UpdateInfo?>(null) }
+            PrefSwitch(stringResource(R.string.updates_on), "updates_on") { }
+            Button(
+                onClick = {
+                    checking = true
+                    checkMessage = null
+                    scope.launch {
+                        val info = UpdateChecker.check(ctx)
+                        checking = false
+                        if (info != null) update = info
+                        else checkMessage = ctx.getString(R.string.update_none)
+                    }
+                },
+                enabled = !checking,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            ) { Text(stringResource(if (checking) R.string.update_checking else R.string.update_check)) }
+            checkMessage?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+            update?.let { UpdateDialog(it) { update = null } }
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -252,6 +285,63 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChan
         }
         IosSwitch(checked = checked, onCheckedChange = onChange)
     }
+}
+
+/** Shows an available update with a button that opens the APK (or release page) in the browser. */
+@Composable
+fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    // -1 = not started, 0..100 = downloading, 101 = download finished and installer launched
+    var progress by remember { mutableIntStateOf(-1) }
+    var failed by remember { mutableStateOf(false) }
+    val apkUrl = info.apkUrl
+    val busy = progress >= 0 && progress <= 100
+
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text(stringResource(R.string.update_available, info.version)) },
+        text = {
+            when {
+                failed -> Text(stringResource(R.string.update_failed))
+                progress >= 0 -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(
+                            progress = { progress.coerceIn(0, 100) / 100f },
+                            modifier = Modifier.fillMaxSize(),
+                            strokeWidth = 6.dp
+                        )
+                        Text("${progress.coerceIn(0, 100)}%", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+                else -> Text(stringResource(R.string.update_desc))
+            }
+        },
+        confirmButton = {
+            if (!busy) TextButton(onClick = {
+                if (apkUrl == null) {
+                    ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.pageUrl)))
+                    onDismiss()
+                    return@TextButton
+                }
+                failed = false
+                progress = 0
+                scope.launch {
+                    try {
+                        val apk = UpdateChecker.download(ctx, apkUrl) { progress = it }
+                        progress = 100
+                        if (UpdateChecker.install(ctx, apk)) onDismiss() else progress = -1
+                    } catch (e: Exception) {
+                        failed = true
+                        progress = -1
+                    }
+                }
+            }) { Text(stringResource(R.string.update_download)) }
+        },
+        dismissButton = {
+            if (!busy) TextButton(onClick = onDismiss) { Text(stringResource(R.string.update_later)) }
+        }
+    )
 }
 
 /** Flat iOS-style pill toggle: accent-coloured track when on, white pill thumb that slides between the states. */

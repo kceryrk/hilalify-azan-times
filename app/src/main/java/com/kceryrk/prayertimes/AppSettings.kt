@@ -28,6 +28,7 @@ object AppSettings {
     fun method(ctx: Context): Int = int(ctx, "method", 13)
     fun refreshHours(ctx: Context): Int = int(ctx, "refresh_hours", 6)
     fun alarmOn(ctx: Context, p: Prayer): Boolean = bool(ctx, "alarm_${p.name}")
+    fun updatesEnabled(ctx: Context): Boolean = bool(ctx, "updates_on")
 
     /** Returns a context using the language chosen in settings (or the system language). */
     fun localized(ctx: Context): Context {

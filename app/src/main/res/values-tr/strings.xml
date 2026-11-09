@@ -72,6 +72,16 @@
     <string name="widget_show_times">Bugünkü vakitleri göster</string>
     <string name="about_version">Sürüm %1$s</string>
     <string name="about_desc">Namaz vakitleri ve ezan alarmları. Ücretsiz ve açık kaynak.</string>
+    <string name="updates_on">Açılışta güncellemeleri kontrol et</string>
+    <string name="update_check">Güncellemeleri kontrol et</string>
+    <string name="update_checking">Kontrol ediliyor…</string>
+    <string name="update_none">En son sürümü kullanıyorsunuz.</string>
+    <string name="update_available">Güncelleme var: %1$s</string>
+    <string name="update_desc">Hilal\'ify\'ın daha yeni bir sürümü GitHub\'da mevcut.</string>
+    <string name="update_download">İndir</string>
+    <string name="update_failed">İndirme başarısız. Bağlantınızı kontrol edip tekrar deneyin.</string>
+    <string name="update_later">Sonra</string>
+
     <string name="kofi">Ko-fi\'de destek ol</string>
     <string name="kofi_desc">Uygulama işinize yaradıysa bana bir kahve ısmarlayabilirsiniz.</string>
 </resources>
