@@ -13,6 +13,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.SpanStyle
@@ -283,6 +284,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun TimesPage(times: Map<Prayer, java.time.LocalTime>?, upcoming: Upcoming?, clock: LocalDateTime) {
         val accent = accentColor()
+        val sky = rememberSkyState()
         val nowTime = clock.toLocalTime()
         val current = times?.filter { !it.value.isAfter(nowTime) }?.maxByOrNull { it.value }?.key
         val locale = resources.configuration.locales[0]
@@ -290,6 +292,7 @@ class MainActivity : ComponentActivity() {
             Modifier
                 .fillMaxSize()
                 .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.45f), MaterialTheme.colorScheme.background)))
+                .drawBehind { drawSky(sky) }
                 .verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 120.dp)
         ) {
@@ -407,7 +410,7 @@ class MainActivity : ComponentActivity() {
                                 .then(
                                     if (timeLeft != null) Modifier.drawBehind {
                                         // Short horizontal line flush with the row's right edge; it moves up as time left shrinks.
-                                        val w = 28.dp.toPx()
+                                        val w = 10.dp.toPx()
                                         val h = 1.5.dp.toPx()
                                         val y = (size.height - h) * (1f - timeLeft)
                                         drawRect(

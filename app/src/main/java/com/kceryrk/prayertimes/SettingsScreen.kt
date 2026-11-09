@@ -204,6 +204,28 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
             PrefSwitch(stringResource(R.string.notif_countdown), "notif_countdown") { Alarms.updateStatus(ctx) }
             PrefSwitch(stringResource(R.string.notif_times), "notif_times") { Alarms.updateStatus(ctx) }
             PrefSwitch(stringResource(R.string.notif_columns), "notif_columns") { Alarms.updateStatus(ctx) }
+            PrefSwitch(stringResource(R.string.kerahat_setting), "kerahat", def = false) {
+                Alarms.updateStatus(ctx)
+                PrayerWidget.refreshAll(ctx)
+            }
+            var kerahatMin by remember { mutableFloatStateOf(AppSettings.int(ctx, "kerahat_min", 45).toFloat()) }
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    "${stringResource(R.string.kerahat_minutes)}: ${kerahatMin.roundToInt()} ${stringResource(R.string.min_short)}",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Slider(
+                    value = kerahatMin,
+                    onValueChange = { kerahatMin = it },
+                    valueRange = 15f..90f,
+                    steps = 14,
+                    onValueChangeFinished = {
+                        AppSettings.put(ctx, "kerahat_min", kerahatMin.roundToInt())
+                        Alarms.updateStatus(ctx)
+                        PrayerWidget.refreshAll(ctx)
+                    }
+                )
+            }
         }
 
         Section(R.string.sec_widget) {

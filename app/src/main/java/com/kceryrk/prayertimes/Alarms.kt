@@ -14,6 +14,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Build
+import android.view.View
 import android.widget.RemoteViews
 import android.text.SpannableString
 import android.text.Spanned
@@ -43,19 +44,29 @@ object Alarms {
         }
 
     /** Expanded view: a divider, prayer names and times in equal-weight columns that fill the row at any font scale. */
-    private fun timesView(ctx: Context, cells: List<Pair<String, String>>): RemoteViews {
+    private fun timesView(ctx: Context, cells: List<Pair<String, String>>, currentIdx: Int, kerahatText: String?): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.notif_times)
         val night = ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
         val labelColor = if (night) 0xB3FFFFFF.toInt() else 0xB3000000.toInt()
         val timeColor = if (night) Color.WHITE else Color.BLACK
+        val accent = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
         rv.setInt(R.id.notif_rule, "setBackgroundColor", if (night) 0x55FFFFFF else 0x55000000)
+        if (kerahatText != null) {
+            rv.setViewVisibility(R.id.notif_kerahat, View.VISIBLE)
+            rv.setImageViewBitmap(R.id.notif_kerahat_hatch, Kerahat.hatch(width = 600, height = 90, color = if (night) 0x80FFFFFF.toInt() else 0x80000000.toInt()))
+            rv.setTextViewText(R.id.notif_kerahat_text, kerahatText)
+            rv.setTextColor(R.id.notif_kerahat_text, timeColor)
+        } else {
+            rv.setViewVisibility(R.id.notif_kerahat, View.GONE)
+        }
         val nameIds = intArrayOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3, R.id.n4, R.id.n5)
         val timeIds = intArrayOf(R.id.t0, R.id.t1, R.id.t2, R.id.t3, R.id.t4, R.id.t5)
         cells.take(6).forEachIndexed { i, (name, time) ->
+            val isCurrent = i == currentIdx
             rv.setTextViewText(nameIds[i], name)
-            rv.setTextColor(nameIds[i], labelColor)
+            rv.setTextColor(nameIds[i], if (isCurrent) accent else labelColor)
             rv.setTextViewText(timeIds[i], time)
-            rv.setTextColor(timeIds[i], timeColor)
+            rv.setTextColor(timeIds[i], if (isCurrent) accent else timeColor)
         }
         return rv
     }
@@ -117,6 +128,9 @@ object Alarms {
             } else prayerLine
         } else c.getString(R.string.no_times)
         val cells = rows.map { c.getString(it.key.labelRes) to it.value.toString() }
+        val currentIdx = rows.indexOfLast { !it.value.isAfter(now.toLocalTime()) }
+        val kerahat = Kerahat.active(ctx, now)
+        val kerahatText = kerahat?.let { Kerahat.label(ctx, it.second, now) }
         val hasTimes = showTimes && rows.isNotEmpty()
         val bigContent: CharSequence = small(header)
 
@@ -130,7 +144,7 @@ object Alarms {
         val n = NotificationCompat.Builder(ctx, CH_STATUS)
             .setSmallIcon(icon ?: IconCompat.createWithResource(ctx, R.drawable.ic_notification))
             .setContentTitle(if (hasTimes) small(header) else null)
-            .setContentText(small(remainingText(c, mins, header)))
+            .setContentText(small(kerahatText ?: remainingText(c, mins, header)))
             .apply {
                 if (nextMillis != null) {
                     setUsesChronometer(true)
@@ -140,7 +154,7 @@ object Alarms {
                 }
             }
             .apply {
-                if (hasTimes) setCustomBigContentView(timesView(ctx, cells))
+                if (hasTimes) setCustomBigContentView(timesView(ctx, cells, currentIdx, kerahatText))
                 else setStyle(NotificationCompat.BigTextStyle().bigText(bigContent))
             }
             .setOngoing(true)

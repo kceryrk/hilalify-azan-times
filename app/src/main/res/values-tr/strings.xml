@@ -37,6 +37,12 @@
     <string name="updating">Güncelleniyor…</string>
     <string name="offline">Çevrimdışı: önbellekteki vakitler gösteriliyor</string>
     <string name="widget_description">Sonraki vakit ve bugünkü vakitler</string>
+    <string name="widget_list_label">Vakit listesi</string>
+    <string name="widget_grid_label">Vakit ızgarası</string>
+    <string name="widget_ring_label">Vakit halkası</string>
+    <string name="widget_list_desc">Sonraki vakit ve tüm vakitler liste olarak</string>
+    <string name="widget_grid_desc">Sonraki vakit ve tüm vakitler ızgara olarak</string>
+    <string name="widget_ring_desc">Geri sayım halkası ve tüm vakitler</string>
     <string name="settings">Ayarlar</string>
     <string name="sec_general">Genel</string>
     <string name="sec_appearance">Görünüm</string>
@@ -73,6 +79,10 @@
     <string name="notif_countdown">Geri sayımı göster</string>
     <string name="notif_times">Bugünkü vakitleri göster</string>
     <string name="notif_columns">Vakitler sütun olarak (satır yerine)</string>
+    <string name="kerahat_setting">Kerahat vakti (makruh vakitler)</string>
+    <string name="kerahat_active">Kerahat vakti</string>
+    <string name="kerahat_minutes">Kerahat süresi</string>
+    <string name="min_short">dk</string>
     <string name="widget_opacity">Arka plan opaklığı</string>
     <string name="widget_show_next">Sonraki vakti göster</string>
     <string name="widget_show_times">Bugünkü vakitleri göster</string>

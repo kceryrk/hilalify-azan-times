@@ -4,11 +4,20 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
+import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.TypedValue
 import android.widget.RemoteViews
 import java.time.Duration
 import java.time.LocalDateTime
+import kotlin.math.max
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 /** Resizable prayer widget. Content adapts to the widget size and to the settings. */
 class PrayerWidget : AppWidgetProvider() {
@@ -25,27 +34,44 @@ class PrayerWidget : AppWidgetProvider() {
             val mgr = AppWidgetManager.getInstance(ctx)
             val ids = mgr.getAppWidgetIds(ComponentName(ctx, PrayerWidget::class.java))
             ids.forEach { mgr.updateAppWidget(it, views(ctx, mgr.getAppWidgetOptions(it))) }
+            refreshOptionWidgets(ctx)
         }
 
         private fun Int.dp(ctx: Context): Int = (this * ctx.resources.displayMetrics.density).toInt()
 
         private fun views(ctx: Context, opts: Bundle): RemoteViews {
             val c = AppSettings.localized(ctx)
-            val rv = RemoteViews(ctx.packageName, R.layout.widget_prayer)
             val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
-            val large = minH >= 180
+            val large = minH >= 120
+            val rv = RemoteViews(ctx.packageName, if (large) R.layout.widget_prayer_large else R.layout.widget_prayer)
             val opacity = AppSettings.int(ctx, "widget_opacity", 85)
-
-            rv.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg)
-            rv.setFloat(R.id.widget_root, "setAlpha", opacity / 100f)
+            val night = ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+            val fg = if (night) Color.WHITE else Color.BLACK
+            val dim = if (night) 0xB3FFFFFF.toInt() else 0xB3000000.toInt()
+            val accent = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
+            val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+            // The background is its own layer, so opacity fades only the panel and never the text.
+            rv.setImageViewBitmap(R.id.widget_bg_img, background(ctx, minW, minH, opacity, night, accent))
 
             val now = LocalDateTime.now()
             val next = PrayerRepo.upcoming(ctx, now)
-            val showNext = AppSettings.bool(ctx, "widget_next")
-            val showTimes = AppSettings.bool(ctx, "widget_times") && minH >= 100
-            rv.setViewPadding(R.id.widget_root, 12.dp(ctx), 12.dp(ctx), 12.dp(ctx), 12.dp(ctx))
+            val kerahat = Kerahat.active(ctx, now)
+            val compact = !large && minH in 1..75
+            val showNext = AppSettings.bool(ctx, "widget_next") && (large || kerahat == null)
+            val showTimes = AppSettings.bool(ctx, "widget_times")
+            val padH = (if (large) 14 else 6).dp(ctx)
+            val padV = (if (large) 14 else if (compact) 4 else 6).dp(ctx)
+            rv.setViewPadding(R.id.widget_root, padH, padV, padH, padV)
             rv.setViewVisibility(R.id.widget_next, visibleIf(showNext))
             rv.setViewVisibility(R.id.widget_grid, visibleIf(showTimes))
+
+            rv.setViewVisibility(R.id.widget_kerahat, visibleIf(kerahat != null))
+            if (kerahat != null) {
+                rv.setImageViewBitmap(R.id.widget_kerahat_hatch, Kerahat.hatch(width = 600, height = 60, color = dim))
+                rv.setTextViewText(R.id.widget_kerahat_text, Kerahat.label(ctx, kerahat.second, now))
+                rv.setTextColor(R.id.widget_kerahat_text, fg)
+                rv.setTextViewTextSize(R.id.widget_kerahat_text, TypedValue.COMPLEX_UNIT_SP, if (large) 15f else 11f)
+            }
 
             if (next != null) {
                 val mins = Duration.between(now, next.at).toMinutes()
@@ -56,18 +82,61 @@ class PrayerWidget : AppWidgetProvider() {
             } else {
                 rv.setTextViewText(R.id.widget_next, c.getString(R.string.no_times))
             }
-            rv.setTextViewTextSize(R.id.widget_next, TypedValue.COMPLEX_UNIT_SP, if (large) 22f else 15f)
+            rv.setTextViewTextSize(R.id.widget_next, TypedValue.COMPLEX_UNIT_SP, if (large) 22f else if (compact) 12f else 13f)
+            rv.setTextColor(R.id.widget_next, fg)
 
             val today = PrayerRepo.today(ctx)
             val rows = today?.entries?.toList().orEmpty()
+            val currentIdx = rows.indexOfLast { !it.value.isAfter(now.toLocalTime()) }
             val labelIds = intArrayOf(R.id.widget_l0, R.id.widget_l1, R.id.widget_l2, R.id.widget_l3, R.id.widget_l4, R.id.widget_l5)
             val timeIds = intArrayOf(R.id.widget_t0, R.id.widget_t1, R.id.widget_t2, R.id.widget_t3, R.id.widget_t4, R.id.widget_t5)
+            val labelTextSize = if (compact) 8.5f else 9f
+            val timeTextSize = if (compact) 11.5f else 12f
             for (i in labelIds.indices) {
                 val row = rows.getOrNull(i)
+                val isCurrent = i == currentIdx
                 rv.setTextViewText(labelIds[i], row?.let { c.getString(it.key.labelRes) } ?: "")
+                rv.setTextColor(labelIds[i], if (isCurrent) accent else dim)
+                rv.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_SP, labelTextSize)
                 rv.setTextViewText(timeIds[i], row?.value?.toString() ?: "")
+                rv.setTextColor(timeIds[i], if (isCurrent) accent else fg)
+                rv.setTextViewTextSize(timeIds[i], TypedValue.COMPLEX_UNIT_SP, timeTextSize)
             }
             return rv
         }
+
+        /** Accent-tinted rounded panel with stars, at the user's opacity. Sized to the widget and kept under RemoteViews' size limit. */
+        internal fun background(ctx: Context, minW: Int, minH: Int, opacity: Int, night: Boolean, accent: Int, fixedDarkBlue: Boolean = false): Bitmap {
+            val d = ctx.resources.displayMetrics.density
+            val w = (if (minW > 0) minW else 250) * d
+            val h = (if (minH > 0) minH else 110) * d
+            val scale = minOf(1f, sqrt(400_000f / (w * h * 4)))
+            val bw = max(1, (w * scale).toInt())
+            val bh = max(1, (h * scale).toInt())
+            val bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
+            val top = if (fixedDarkBlue) 0xFF1B2A4E.toInt() else if (night) mix(accent, 0xFF1B2A4E.toInt(), 0.45f) else mix(accent, Color.WHITE, 0.85f)
+            val bottom = if (fixedDarkBlue) 0xFF0A1226.toInt() else if (night) mix(accent, 0xFF0A1226.toInt(), 0.8f) else mix(accent, Color.WHITE, 0.6f)
+            val bg = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(top, bottom))
+            bg.cornerRadius = 28 * d * scale
+            if (!fixedDarkBlue) bg.setStroke(max(1, (d * scale).roundToInt()), if (night) 0x33FFFFFF else 0x33000000)
+            bg.setBounds(0, 0, bw, bh)
+            bg.alpha = opacity * 255 / 100
+            val canvas = Canvas(bmp)
+            bg.draw(canvas)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
+            val starAlpha = opacity / 100f
+            Stars.home.forEach { s ->
+                paint.alpha = (s.alpha * starAlpha * 255).toInt()
+                canvas.drawCircle(s.x * bw, s.y * bh, s.radiusDp * d * scale * 0.55f, paint)
+            }
+            return bmp
+        }
+
+        private fun mix(a: Int, b: Int, t: Float): Int = Color.rgb(
+            (Color.red(a) + (Color.red(b) - Color.red(a)) * t).roundToInt(),
+            (Color.green(a) + (Color.green(b) - Color.green(a)) * t).roundToInt(),
+            (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t).roundToInt()
+        )
     }
 }
+

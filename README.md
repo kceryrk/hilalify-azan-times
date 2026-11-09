@@ -12,6 +12,7 @@ Hilal'ify is an Android prayer-times app (Jetpack Compose, Material 3) that show
 
 ### Prayer times
 - Daily times for Fajr, Sunrise, Dhuhr, Asr, Maghrib, and Isha
+- Optional kerahat vakti (makruh time) indicator with countdown, on the widget and notification
 - Next-prayer highlight, with a countdown that shows seconds under 10 minutes
 - Past prayers are dimmed
 - Localized Gregorian and Hijri dates
