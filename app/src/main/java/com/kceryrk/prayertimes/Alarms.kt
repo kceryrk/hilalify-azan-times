@@ -110,6 +110,8 @@ object Alarms {
             nm.cancel(NOTIF_STATUS)
             return
         }
+        // Re-arm the minute tick first so a rendering failure can't stop the background refresh chain.
+        scheduleTick(ctx)
         val c = AppSettings.localized(ctx)
         val now = LocalDateTime.now()
         val next = PrayerRepo.upcoming(ctx, now)
@@ -134,12 +136,13 @@ object Alarms {
         val hasTimes = showTimes && rows.isNotEmpty()
         val bigContent: CharSequence = small(header)
 
-        val mins = next?.let { Duration.between(now, it.at).toMinutes() }
+        val mins = next?.let { Duration.between(now, it.at).toMinutes().coerceAtLeast(0) }
         val icon = if (mins != null && mins < 60) {
             IconCompat.createWithBitmap(minuteIcon(mins))
         } else null
         // The system chronometer counts down to the next prayer itself, so it stays live between app updates.
         val nextMillis = next?.at?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+            ?.takeIf { it > System.currentTimeMillis() }
 
         val n = NotificationCompat.Builder(ctx, CH_STATUS)
             .setSmallIcon(icon ?: IconCompat.createWithResource(ctx, R.drawable.ic_notification))
@@ -164,7 +167,6 @@ object Alarms {
             .setContentIntent(launchIntent(ctx))
             .build()
         nm.notify(NOTIF_STATUS, n)
-        scheduleTick(ctx)
     }
 
     /** Line under the header: "N min left" until the next prayer, falling back to the header text. */

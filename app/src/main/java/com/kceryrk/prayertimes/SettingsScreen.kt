@@ -42,7 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -231,8 +230,8 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 Slider(
                     value = kerahatMin,
                     onValueChange = { kerahatMin = it },
-                    valueRange = 15f..90f,
-                    steps = 14,
+                    valueRange = 20f..60f,
+                    steps = 7,
                     onValueChangeFinished = {
                         AppSettings.put(ctx, "kerahat_min", kerahatMin.roundToInt())
                         Alarms.updateStatus(ctx)
@@ -263,6 +262,13 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
             PrefSwitch(stringResource(R.string.widget_show_next), "widget_next") { PrayerWidget.refreshAll(ctx) }
             RowDivider()
             PrefSwitch(stringResource(R.string.widget_show_times), "widget_times") { PrayerWidget.refreshAll(ctx) }
+        }
+
+        Section(R.string.sec_permissions) {
+            ListItemRow(
+                title = stringResource(R.string.background_settings),
+                subtitle = stringResource(R.string.background_settings_desc)
+            ) { openBackgroundSettings(ctx) }
         }
 
         Section(R.string.sec_about) {
@@ -317,6 +323,41 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 ) { Text(stringResource(R.string.kofi)) }
             }
         }
+    }
+}
+
+private fun openBackgroundSettings(ctx: android.content.Context) {
+    val vendorIntent = Intent().setComponent(
+        android.content.ComponentName(
+            "com.miui.securitycenter",
+            "com.miui.permcenter.autostart.AutoStartManagementActivity"
+        )
+    )
+    val appDetails = Intent(
+        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        Uri.parse("package:${ctx.packageName}")
+    )
+    try {
+        ctx.startActivity(vendorIntent)
+    } catch (_: android.content.ActivityNotFoundException) {
+        ctx.startActivity(appDetails)
+    }
+}
+
+@Composable
+private fun ListItemRow(title: String, subtitle: String, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -393,11 +434,11 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            if (!busy) TextButton(onClick = {
+            if (!busy) GlassDialogAction(stringResource(R.string.update_download)) {
                 if (apkUrl == null) {
                     ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.pageUrl)))
                     onDismiss()
-                    return@TextButton
+                    return@GlassDialogAction
                 }
                 failed = false
                 progress = 0
@@ -411,7 +452,7 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit) {
                         progress = -1
                     }
                 }
-            }) { Text(stringResource(R.string.update_download)) }
+            }
         },
         dismissButton = {
             if (!busy) GlassDialogAction(stringResource(R.string.update_later), onDismiss)

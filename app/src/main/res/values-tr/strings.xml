@@ -51,6 +51,7 @@
     <string name="sec_notif">Kalıcı bildirim</string>
     <string name="sec_widget">Widget</string>
     <string name="sec_times">Namaz vakitleri</string>
+    <string name="sec_permissions">İzinler</string>
     <string name="sec_about">Hakkında</string>
     <string name="language">Dil</string>
     <string name="lang_system">Sistem</string>
@@ -90,6 +91,8 @@
     <string name="about_version">Sürüm %1$s</string>
     <string name="about_desc">Namaz vakitleri ve ezan alarmları. Ücretsiz ve açık kaynak.</string>
     <string name="updates_on">Açılışta güncellemeleri kontrol et</string>
+    <string name="background_settings">Arka plan izinleri</string>
+    <string name="background_settings_desc">Bildirimin arka planda güncellenmesi için otomatik başlatma ve pil kısıtlamasız mod açın (Xiaomi, Huawei vb.)</string>
     <string name="update_check">Güncellemeleri kontrol et</string>
     <string name="update_checking">Kontrol ediliyor…</string>
     <string name="update_none">En son sürümü kullanıyorsunuz.</string>

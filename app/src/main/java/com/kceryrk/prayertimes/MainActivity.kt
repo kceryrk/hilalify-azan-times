@@ -333,7 +333,7 @@ class MainActivity : ComponentActivity() {
             if (upcoming != null) {
                 val totalSecs = Duration.between(clock, upcoming.at).seconds.coerceAtLeast(0)
                 val mins = totalSecs / 60
-                val heroShape = RoundedCornerShape(24.dp)
+                val heroShape = RoundedCornerShape(20.dp)
                 val contrast = if (accent.luminance() > 0.5f) Color.Black else Color.White
                 Row(
                     Modifier
@@ -391,6 +391,17 @@ class MainActivity : ComponentActivity() {
                                 style = Stroke(1.dp.toPx())
                             )
                         }
+                        .drawWithContent {
+                            drawContent()
+                            // Dotted track along the whole right edge of the list.
+                            val dotX = size.width - 2.dp.toPx()
+                            val step = 6.dp.toPx()
+                            var dotY = step / 2
+                            while (dotY < size.height) {
+                                drawCircle(accent.copy(alpha = 0.35f), radius = 1.dp.toPx(), center = Offset(dotX, dotY))
+                                dotY += step
+                            }
+                        }
                 ) {
                     prayers.forEachIndexed { i, p ->
                         val isCurrent = p == current
@@ -409,7 +420,6 @@ class MainActivity : ComponentActivity() {
                                 .background(if (isCurrent) accent.copy(alpha = 0.22f) else Color.Transparent)
                                 .then(
                                     if (timeLeft != null) Modifier.drawBehind {
-                                        // Short horizontal line flush with the row's right edge; it moves up as time left shrinks.
                                         val w = 10.dp.toPx()
                                         val h = 1.5.dp.toPx()
                                         val y = (size.height - h) * (1f - timeLeft)

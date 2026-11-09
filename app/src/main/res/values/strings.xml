@@ -52,6 +52,7 @@
     <string name="sec_notif">Permanent notification</string>
     <string name="sec_widget">Widget</string>
     <string name="sec_times">Prayer times</string>
+    <string name="sec_permissions">Permissions</string>
     <string name="sec_about">About</string>
     <string name="language">Language</string>
     <string name="lang_system">System</string>
@@ -91,6 +92,8 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_desc">Prayer times and adhan alarms. Free and open source.</string>
     <string name="updates_on">Check for updates on launch</string>
+    <string name="background_settings">Background permissions</string>
+    <string name="background_settings_desc">Allow autostart and unrestricted battery so the notification keeps updating (Xiaomi, Huawei, etc.)</string>
     <string name="update_check">Check for updates</string>
     <string name="update_checking">Checking…</string>
     <string name="update_none">You have the latest version.</string>

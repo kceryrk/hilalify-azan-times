@@ -22,7 +22,7 @@ object Kerahat {
         val sunrise = t[Prayer.SUNRISE] ?: return null
         val dhuhr = t[Prayer.DHUHR] ?: return null
         val maghrib = t[Prayer.MAGHRIB] ?: return null
-        val window = AppSettings.int(ctx, "kerahat_min", 45).toLong()
+        val window = AppSettings.int(ctx, "kerahat_min", 45).coerceIn(20, 60).toLong()
         val windows = listOf(
             day.atTime(sunrise) to day.atTime(sunrise).plusMinutes(window),
             day.atTime(dhuhr).minusMinutes(window) to day.atTime(dhuhr),
