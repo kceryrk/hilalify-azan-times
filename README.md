@@ -73,6 +73,7 @@ Hilal'ify is an Android prayer-times app (Jetpack Compose, Material 3) that show
 | `POST_NOTIFICATIONS` | Adhan alarms and the permanent notification |
 | `RECEIVE_BOOT_COMPLETED` | Reschedule alarms after reboot |
 | `REQUEST_INSTALL_PACKAGES` | Install in-app updates |
+| `SCHEDULE_EXACT_ALARM` | Optional. Keeps the per-minute notification icon updating on phones that delay inexact alarms. Works without it. |
 
 ## Tech stack
 - Kotlin, Jetpack Compose, Material 3

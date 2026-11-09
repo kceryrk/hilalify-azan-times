@@ -14,9 +14,9 @@
     <string name="status_countdown">%1$s: %2$d dk kaldı</string>
     <string name="next_prayer">%1$s</string>
     <string name="choose_city">Choose city</string>
-    <string name="countdown_hm">%1$d saat %2$02d dakika kaldı</string>
-    <string name="countdown_m">%1$d dakika kaldı</string>
-    <string name="countdown_ms">%1$d dakika %2$02d saniye kaldı</string>
+    <string name="countdown_hm">%1$d sa %2$02d dk kaldı</string>
+    <string name="countdown_m">%1$d dk kaldı</string>
+    <string name="countdown_ms">%1$d dk %2$02d sn kaldı</string>
     <string name="no_times">Vakitler henüz alınamadı</string>
     <string name="set_city">Şehir seç</string>
     <string name="accent">Vurgu rengi</string>

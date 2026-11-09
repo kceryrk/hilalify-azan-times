@@ -7,20 +7,23 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.os.Build
+import android.widget.RemoteViews
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
-import android.text.style.TypefaceSpan
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * Schedules adhan notifications and the permanent prayer-times notification.
@@ -32,21 +35,29 @@ object Alarms {
     const val NOTIF_STATUS = 1001
     private const val REQ_ADHAN = 2001
     private const val REQ_TICK = 2002
+    private val HM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     private fun small(text: CharSequence): CharSequence =
         SpannableString(text).apply {
             setSpan(RelativeSizeSpan(0.72f), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
-    /** Monospace header row of prayer names over a row of times, so the columns line up. */
-    private fun table(names: List<String>, times: List<String>): CharSequence {
-        val widths = names.indices.map { maxOf(names[it].length, times[it].length) + 2 }
-        val header = names.indices.joinToString("") { names[it].padEnd(widths[it]) }.trimEnd()
-        val body = times.indices.joinToString("") { times[it].padEnd(widths[it]) }.trimEnd()
-        return SpannableString("$header\n$body").apply {
-            setSpan(TypefaceSpan("monospace"), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            setSpan(RelativeSizeSpan(0.72f), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    /** Expanded view: a divider, prayer names and times in equal-weight columns that fill the row at any font scale. */
+    private fun timesView(ctx: Context, cells: List<Pair<String, String>>): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.notif_times)
+        val night = ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        val labelColor = if (night) 0xB3FFFFFF.toInt() else 0xB3000000.toInt()
+        val timeColor = if (night) Color.WHITE else Color.BLACK
+        rv.setInt(R.id.notif_rule, "setBackgroundColor", if (night) 0x55FFFFFF else 0x55000000)
+        val nameIds = intArrayOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3, R.id.n4, R.id.n5)
+        val timeIds = intArrayOf(R.id.t0, R.id.t1, R.id.t2, R.id.t3, R.id.t4, R.id.t5)
+        cells.take(6).forEachIndexed { i, (name, time) ->
+            rv.setTextViewText(nameIds[i], name)
+            rv.setTextColor(nameIds[i], labelColor)
+            rv.setTextViewText(timeIds[i], time)
+            rv.setTextColor(timeIds[i], timeColor)
         }
+        return rv
     }
 
     fun createChannels(ctx: Context) {
@@ -65,14 +76,20 @@ object Alarms {
         am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
     }
 
-    /** Schedules a 1-minute tick used to refresh the permanent notification countdown. */
+    /**
+     * Schedules a tick at the next minute boundary to refresh the notification icon.
+     * Uses an exact alarm when the user has allowed it, since OEM battery managers often delay inexact ones.
+     */
     fun scheduleTick(ctx: Context) {
         val am = ctx.getSystemService(AlarmManager::class.java)
         val pi = PendingIntent.getBroadcast(
             ctx, REQ_TICK, Intent(ctx, TickReceiver::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        am.setAndAllowWhileIdle(AlarmManager.RTC, System.currentTimeMillis() + 60_000, pi)
+        val nextMinute = (System.currentTimeMillis() / 60_000 + 1) * 60_000
+        val exactAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()
+        if (exactAllowed) am.setExactAndAllowWhileIdle(AlarmManager.RTC, nextMinute, pi)
+        else am.setAndAllowWhileIdle(AlarmManager.RTC, nextMinute, pi)
     }
 
     /** Shows or cancels the permanent notification, honouring the show/hide settings. */
@@ -89,30 +106,43 @@ object Alarms {
 
         val rows = today?.entries?.toList().orEmpty()
         val showTimes = AppSettings.bool(ctx, "notif_times")
-        val nextLine = if (next != null) {
-            val mins = Duration.between(now, next.at).toMinutes()
+        val city = PrayerRepo.locationLabel(ctx)?.substringBefore(',')?.trim()
+        val header = if (next != null) {
             val label = c.getString(next.prayer.labelRes)
-            val time = if (mins < 60) c.getString(R.string.in_minutes, mins)
-            else c.getString(R.string.in_time, mins / 60, mins % 60)
-            "$label · $time"
+            val prayerLine = "$label: ${next.at.format(HM)}"
+            if (city != null) {
+                val maxCityChars = 16
+                val shortCity = if (city.length > maxCityChars) city.take(maxCityChars - 1).trimEnd() + "…" else city
+                "$shortCity · $prayerLine"
+            } else prayerLine
         } else c.getString(R.string.no_times)
         val cells = rows.map { c.getString(it.key.labelRes) to it.value.toString() }
-        val compactTimes = rows.joinToString(" · ") { it.value.toString() }
         val hasTimes = showTimes && rows.isNotEmpty()
-        val bigContent: CharSequence = if (hasTimes) {
-            table(cells.map { it.first }, cells.map { it.second })
-        } else small(nextLine)
+        val bigContent: CharSequence = small(header)
 
         val mins = next?.let { Duration.between(now, it.at).toMinutes() }
         val icon = if (mins != null && mins < 60) {
             IconCompat.createWithBitmap(minuteIcon(mins))
         } else null
+        // The system chronometer counts down to the next prayer itself, so it stays live between app updates.
+        val nextMillis = next?.at?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
 
         val n = NotificationCompat.Builder(ctx, CH_STATUS)
             .setSmallIcon(icon ?: IconCompat.createWithResource(ctx, R.drawable.ic_notification))
-            .setContentTitle(if (hasTimes) small(nextLine) else null)
-            .setContentText(if (hasTimes) small(compactTimes) else small(nextLine))
-            .setStyle(NotificationCompat.BigTextStyle().bigText(bigContent))
+            .setContentTitle(if (hasTimes) small(header) else null)
+            .setContentText(small(remainingText(c, mins, header)))
+            .apply {
+                if (nextMillis != null) {
+                    setUsesChronometer(true)
+                    setChronometerCountDown(true)
+                    setShowWhen(true)
+                    setWhen(nextMillis)
+                }
+            }
+            .apply {
+                if (hasTimes) setCustomBigContentView(timesView(ctx, cells))
+                else setStyle(NotificationCompat.BigTextStyle().bigText(bigContent))
+            }
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
@@ -123,17 +153,31 @@ object Alarms {
         scheduleTick(ctx)
     }
 
+    /** Line under the header: "N min left" until the next prayer, falling back to the header text. */
+    private fun remainingText(c: Context, mins: Long?, fallback: String): String {
+        if (mins == null) return fallback
+        return if (mins < 60) c.getString(R.string.countdown_m, mins.toInt())
+        else c.getString(R.string.countdown_hm, (mins / 60).toInt(), (mins % 60).toInt())
+    }
+
     /** Renders the remaining minutes as a small white status-bar icon. */
     private fun minuteIcon(mins: Long): Bitmap {
         val size = 96
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val text = mins.toString()
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
-            textSize = 60f
             typeface = Typeface.DEFAULT_BOLD
             textAlign = Paint.Align.CENTER
+            textSize = 72f
         }
-        Canvas(bmp).drawText(mins.toString(), size / 2f, size / 2f + 20f, paint)
+        // Shrink the glyphs so the number always fits inside the icon, whatever the digit count.
+        val maxWidth = size * 0.9f
+        val measured = paint.measureText(text)
+        if (measured > maxWidth) paint.textSize = 72f * maxWidth / measured
+        val fm = paint.fontMetrics
+        val baseline = size / 2f - (fm.ascent + fm.descent) / 2f
+        Canvas(bmp).drawText(text, size / 2f, baseline, paint)
         return bmp
     }
 
@@ -169,6 +213,7 @@ class AlarmReceiver : BroadcastReceiver() {
 class TickReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         Alarms.updateStatus(context)
+        PrayerWidget.refreshAll(context)
     }
 }
 
