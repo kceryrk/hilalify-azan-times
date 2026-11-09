@@ -12,10 +12,16 @@
     <string name="adhan_title">%1$s vakti girdi</string>
     <string name="adhan_text">Namaz vakti geldi.</string>
     <string name="status_countdown">%1$s: %2$d dk kaldı</string>
-    <string name="next_prayer">Sonraki: %1$s</string>
-    <string name="in_time">%1$dsa %2$02ddk sonra</string>
+    <string name="next_prayer">%1$s</string>
+    <string name="choose_city">Choose city</string>
+    <string name="countdown_hm">%1$d saat %2$02d dakika kaldı</string>
+    <string name="countdown_m">%1$d dakika kaldı</string>
+    <string name="countdown_ms">%1$d dakika %2$02d saniye kaldı</string>
     <string name="no_times">Vakitler henüz alınamadı</string>
     <string name="set_city">Şehir seç</string>
+    <string name="accent">Vurgu rengi</string>
+    <string name="gps_city">Mevcut şehir: %1$s</string>
+    <string name="gps_city_unknown">Konum alınıyor…</string>
     <string name="city">Şehir</string>
     <string name="country">Ülke</string>
     <string name="save">Kaydet</string>
@@ -84,4 +90,16 @@
 
     <string name="kofi">Ko-fi\'de destek ol</string>
     <string name="kofi_desc">Uygulama işinize yaradıysa bana bir kahve ısmarlayabilirsiniz.</string>
+    <string name="tab_tools">Araçlar</string>
+    <string name="tools_compass">Pusula</string>
+    <string name="tools_zikir">Zikirmatik</string>
+    <string name="zikir_reset">Sıfırla</string>
+    <string name="zikir_save">Kaydet</string>
+    <string name="zikir_history">Geçmiş</string>
+    <string name="zikir_clear">Temizle</string>
+    <string name="city_hint">En az 3 harf yazın</string>
+    <string name="saved_places">Kayıtlı yerler</string>
+    <string name="zikir_hand_right">Sağ el</string>
+    <string name="zikir_hand_left">Sol el</string>
+    <string name="in_minutes">%1$d dk</string>
 </resources>

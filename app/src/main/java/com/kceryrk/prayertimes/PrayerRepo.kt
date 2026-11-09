@@ -9,6 +9,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
+import java.util.Locale
 
 enum class Prayer(val apiKey: String, val labelRes: Int, val notify: Boolean) {
     FAJR("Fajr", R.string.prayer_fajr, true),
@@ -21,6 +22,18 @@ enum class Prayer(val apiKey: String, val labelRes: Int, val notify: Boolean) {
 
 data class Upcoming(val at: LocalDateTime, val prayer: Prayer)
 
+/** A city from the geocoding search, with coordinates used for the prayer calendar. */
+data class CityHit(val name: String, val country: String, val lat: Double, val lon: Double, val countryCode: String = "") {
+    /** Country name in the given (in-app) language, falling back to the API's name. */
+    fun countryName(locale: Locale): String =
+        if (countryCode.length == 2) Locale("", countryCode).getDisplayCountry(locale).ifBlank { country } else country
+
+    fun label(locale: Locale): String {
+        val c = countryName(locale)
+        return if (c.isBlank()) name else "$name, $c"
+    }
+}
+
 /**
  * Fetches monthly prayer calendars from Aladhan and caches the raw JSON per location, method and month,
  * so the times still work offline. The calculation method comes from settings (default 13, Diyanet).
@@ -30,17 +43,72 @@ object PrayerRepo {
     private const val PREFS = "prayer_times"
     private const val KEY_MODE = "mode"   // "gps" or "city"
     private const val KEY_GPS = "gps"     // "lat,lon"
-    private const val KEY_CITY = "city"   // "city|country"
+    private const val KEY_CITY = "city"   // "name|country|lat|lon"
+    private const val KEY_GPS_LABEL = "gps_label"
+    private const val KEY_GPS_CC = "gps_cc"   // ISO country code of the GPS locality
     private const val KEY_OK = "last_ok"
+    private const val KEY_CITIES = "saved_cities" // JSON list of CityHit, newest first
 
     fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun saveGps(ctx: Context, lat: Double, lon: Double) {
-        prefs(ctx).edit().putString(KEY_MODE, "gps").putString(KEY_GPS, "$lat,$lon").apply()
+    fun saveGps(ctx: Context, lat: Double, lon: Double, label: String? = null, countryCode: String = "") {
+        prefs(ctx).edit().putString(KEY_MODE, "gps").putString(KEY_GPS, "$lat,$lon")
+            .putString(KEY_GPS_LABEL, label).putString(KEY_GPS_CC, countryCode).apply()
     }
 
-    fun saveCity(ctx: Context, city: String, country: String) {
-        prefs(ctx).edit().putString(KEY_MODE, "city").putString(KEY_CITY, "$city|$country").apply()
+    /** Selects a city as the active location and remembers it in the saved list (newest first). */
+    fun saveCity(ctx: Context, hit: CityHit) {
+        val others = savedCities(ctx).filter { it.lat != hit.lat || it.lon != hit.lon }
+        val arr = org.json.JSONArray()
+        (listOf(hit) + others).take(20).forEach {
+            arr.put(org.json.JSONObject().put("n", it.name).put("c", it.country).put("a", it.lat).put("o", it.lon).put("cc", it.countryCode))
+        }
+        prefs(ctx).edit().putString(KEY_MODE, "city")
+            .putString(KEY_CITY, listOf(hit.name, hit.country, hit.lat, hit.lon, hit.countryCode).joinToString("|"))
+            .putString(KEY_CITIES, arr.toString()).apply()
+    }
+
+    fun savedCities(ctx: Context): List<CityHit> {
+        val arr = try { org.json.JSONArray(prefs(ctx).getString(KEY_CITIES, "[]")) } catch (_: Exception) { return emptyList() }
+        return (0 until arr.length()).map { i ->
+            val o = arr.getJSONObject(i)
+            CityHit(o.getString("n"), o.getString("c"), o.getDouble("a"), o.getDouble("o"), o.optString("cc"))
+        }
+    }
+
+    fun cityHit(ctx: Context): CityHit? {
+        val parts = prefs(ctx).getString(KEY_CITY, null)?.split("|") ?: return null
+        if (parts.size < 4) return null
+        return CityHit(
+            parts[0], parts[1],
+            parts[2].toDoubleOrNull() ?: return null,
+            parts[3].toDoubleOrNull() ?: return null,
+            parts.getOrNull(4) ?: ""
+        )
+    }
+
+    /** Name shown on the home page: the chosen city, or the reverse-geocoded GPS locality. */
+    fun locationLabel(ctx: Context): String? =
+        if (isGpsMode(ctx) && savedGps(ctx) != null) {
+            val locale = AppSettings.localized(ctx).resources.configuration.locales[0]
+            val city = prefs(ctx).getString(KEY_GPS_LABEL, null) ?: return null
+            val cc = prefs(ctx).getString(KEY_GPS_CC, "") ?: ""
+            CityHit(city, "", 0.0, 0.0, cc).label(locale)
+        } else cityHit(ctx)?.label(AppSettings.localized(ctx).resources.configuration.locales[0])
+
+    /** Autocomplete search through Open-Meteo's free geocoding API. */
+    fun searchCities(query: String, lang: String): List<CityHit> {
+        val url = "https://geocoding-api.open-meteo.com/v1/search?name=${enc(query)}&count=8&language=$lang&format=json"
+        val body = download(url) ?: return emptyList()
+        val results = JSONObject(body).optJSONArray("results") ?: return emptyList()
+        return (0 until results.length()).map { i ->
+            val r = results.getJSONObject(i)
+            CityHit(
+                r.getString("name"), r.optString("country"),
+                r.getDouble("latitude"), r.getDouble("longitude"),
+                r.optString("country_code")
+            )
+        }
     }
 
     fun setGpsMode(ctx: Context, gps: Boolean) {
@@ -56,27 +124,19 @@ object PrayerRepo {
 
     fun lastOk(ctx: Context) = prefs(ctx).getBoolean(KEY_OK, true)
 
-    /** GPS when selected and known, otherwise the manual city. */
+    /** GPS when selected and known, otherwise the chosen city's coordinates. */
     private fun source(ctx: Context): String? {
-        val p = prefs(ctx)
-        val gps = p.getString(KEY_GPS, null)
-        val city = p.getString(KEY_CITY, null)
+        val gps = prefs(ctx).getString(KEY_GPS, null)
+        val city = cityHit(ctx)
         return if (isGpsMode(ctx) && gps != null) "gps:$gps"
-        else city?.let { "city:$it" } ?: gps?.let { "gps:$it" }
+        else city?.let { "geo:${it.lat},${it.lon}" } ?: gps?.let { "gps:$it" }
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
 
     private fun url(src: String, ym: YearMonth, method: Int): String {
-        val kind = src.substringBefore(':')
-        val value = src.substringAfter(':')
-        return if (kind == "gps") {
-            val (lat, lon) = value.split(",")
-            "$API/calendar/${ym.year}/${ym.monthValue}?latitude=$lat&longitude=$lon&method=$method"
-        } else {
-            val (city, country) = value.split("|")
-            "$API/calendarByCity/${ym.year}/${ym.monthValue}?city=${enc(city)}&country=${enc(country)}&method=$method"
-        }
+        val (lat, lon) = src.substringAfter(':').split(",")
+        return "$API/calendar/${ym.year}/${ym.monthValue}?latitude=$lat&longitude=$lon&method=$method"
     }
 
     private fun cacheKey(ctx: Context, src: String, ym: YearMonth) = "cache_${src}_m${AppSettings.method(ctx)}_$ym"

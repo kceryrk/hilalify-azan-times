@@ -12,10 +12,17 @@
     <string name="adhan_title">Time for %1$s</string>
     <string name="adhan_text">It is time for prayer.</string>
     <string name="status_countdown">%1$s in %2$d min</string>
-    <string name="next_prayer">Next: %1$s</string>
+    <string name="next_prayer">%1$s</string>
+    <string name="choose_city">Choose city</string>
     <string name="in_time">in %1$dh %2$02dm</string>
+    <string name="countdown_hm">%1$d hours %2$02d min left</string>
+    <string name="countdown_m">%1$d min left</string>
+    <string name="countdown_ms">%1$d min %2$02d sec left</string>
     <string name="no_times">Prayer times not available yet</string>
     <string name="set_city">Set city</string>
+    <string name="accent">Accent color</string>
+    <string name="gps_city">Current city: %1$s</string>
+    <string name="gps_city_unknown">Locating…</string>
     <string name="city">City</string>
     <string name="country">Country</string>
     <string name="save">Save</string>
@@ -84,4 +91,16 @@
 
     <string name="kofi">Support on Ko-fi</string>
     <string name="kofi_desc">If the app helps you, you can buy me a coffee.</string>
+    <string name="tab_tools">Tools</string>
+    <string name="tools_compass">Compass</string>
+    <string name="tools_zikir">Zikirmatik</string>
+    <string name="zikir_reset">Reset</string>
+    <string name="zikir_save">Save</string>
+    <string name="zikir_history">History</string>
+    <string name="zikir_clear">Clear</string>
+    <string name="city_hint">Type at least 3 letters</string>
+    <string name="saved_places">Saved places</string>
+    <string name="zikir_hand_right">Right hand</string>
+    <string name="zikir_hand_left">Left hand</string>
+    <string name="in_minutes">%1$d min</string>
 </resources>

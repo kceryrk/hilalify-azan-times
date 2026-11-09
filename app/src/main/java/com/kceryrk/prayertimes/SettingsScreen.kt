@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -26,6 +27,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -51,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
@@ -63,6 +69,7 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
     Column(
         Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 120.dp)
     ) {
@@ -78,14 +85,24 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 gps = it
                 onGpsToggle(it)
             }
-            if (!gps) {
+            if (gps) {
+                Text(
+                    PrayerRepo.locationLabel(ctx)?.let { stringResource(R.string.gps_city, it) }
+                        ?: stringResource(R.string.gps_city_unknown),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            } else {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                        .clickable(onClick = onCity)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(onClick = onCity) { Text(stringResource(R.string.set_city)) }
+                    Text(stringResource(R.string.set_city), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                    Chevron()
                 }
             }
             PrefChoice(
@@ -107,19 +124,29 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 AppSettings.put(ctx, "theme", it)
                 onRecreate()
             }
-            Text("Accent", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
+            Text(
+                stringResource(R.string.accent),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+                textAlign = TextAlign.Center
+            )
             val current = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 listOf(0xFF00A86B, 0xFF0A84FF, 0xFFFF375F, 0xFFFF9F0A, 0xFFBF5AF2, 0xFF64D2FF).forEach { argb ->
                     val value = argb.toInt()
+                    val selected = value == current
                     Box(
                         Modifier
-                            .size(36.dp)
+                            .size(if (selected) 46.dp else 36.dp)
                             .clip(CircleShape)
                             .background(Color(value))
                             .border(
-                                if (value == current) 3.dp else 0.dp,
-                                if (value == current) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                if (selected) 3.dp else 0.dp,
+                                if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
                                 CircleShape
                             )
                             .clickable {
@@ -298,7 +325,7 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit) {
     val apkUrl = info.apkUrl
     val busy = progress >= 0 && progress <= 100
 
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(stringResource(R.string.update_available, info.version)) },
         text = {
@@ -339,7 +366,7 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit) {
             }) { Text(stringResource(R.string.update_download)) }
         },
         dismissButton = {
-            if (!busy) TextButton(onClick = onDismiss) { Text(stringResource(R.string.update_later)) }
+            if (!busy) GlassDialogAction(stringResource(R.string.update_later), onDismiss)
         }
     )
 }
@@ -382,6 +409,23 @@ private fun PrefSwitch(title: String, key: String, def: Boolean = true, onChange
 }
 
 @Composable
+private fun Chevron() {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    Canvas(Modifier.size(width = 8.dp, height = 14.dp)) {
+        val stroke = 2.dp.toPx()
+        drawPath(
+            Path().apply {
+                moveTo(stroke, stroke)
+                lineTo(size.width - stroke, size.height / 2f)
+                lineTo(stroke, size.height - stroke)
+            },
+            color = color,
+            style = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+    }
+}
+
+@Composable
 private fun PrefChoice(title: String, current: String, choices: List<Choice>, onPick: (String) -> Unit) {
     var value by remember(current) { mutableStateOf(current) }
     var open by remember { mutableStateOf(false) }
@@ -396,10 +440,12 @@ private fun PrefChoice(title: String, current: String, choices: List<Choice>, on
     ) {
         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         Text(stringResource(label), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.width(6.dp))
+        Chevron()
     }
 
     if (open) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { open = false },
             title = { Text(title) },
             text = {
@@ -423,7 +469,7 @@ private fun PrefChoice(title: String, current: String, choices: List<Choice>, on
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.cancel)) } }
+            confirmButton = { GlassDialogAction(stringResource(R.string.cancel)) { open = false } }
         )
     }
 }

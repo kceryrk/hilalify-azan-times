@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
+import java.util.concurrent.atomic.AtomicBoolean
 
 object LocationHelper {
     private const val TIMEOUT_MS = 15_000L
@@ -20,19 +21,26 @@ object LocationHelper {
     @SuppressLint("MissingPermission")
     fun current(ctx: Context, onResult: (Location?) -> Unit) {
         val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val main = Handler(Looper.getMainLooper())
+        // Guarantees exactly one callback, even if the system never answers.
+        val done = AtomicBoolean(false)
+        fun finish(loc: Location?) {
+            if (done.compareAndSet(false, true)) {
+                main.removeCallbacksAndMessages(null)
+                onResult(loc ?: lastKnown(lm))
+            }
+        }
         val provider = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
             .firstOrNull { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
-        if (provider == null) return onResult(lastKnown(lm))
+        if (provider == null) return finish(null)
 
         val signal = CancellationSignal()
-        val main = Handler(Looper.getMainLooper())
-        val timeout = Runnable { signal.cancel() }
+        main.postDelayed({ signal.cancel(); finish(null) }, TIMEOUT_MS)
         LocationManagerCompat.getCurrentLocation(lm, provider, signal, ContextCompat.getMainExecutor(ctx)) { loc ->
-            main.removeCallbacks(timeout)
-            onResult(loc ?: lastKnown(lm))
+            finish(loc)
         }
-        main.postDelayed(timeout, TIMEOUT_MS)
     }
+
 
     @SuppressLint("MissingPermission")
     private fun lastKnown(lm: LocationManager): Location? =

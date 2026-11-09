@@ -7,11 +7,17 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
 import android.text.style.TypefaceSpan
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.IconCompat
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -85,8 +91,10 @@ object Alarms {
         val showTimes = AppSettings.bool(ctx, "notif_times")
         val nextLine = if (next != null) {
             val mins = Duration.between(now, next.at).toMinutes()
-            c.getString(R.string.next_prayer, c.getString(next.prayer.labelRes)) + " · " +
-                c.getString(R.string.in_time, mins / 60, mins % 60)
+            val label = c.getString(next.prayer.labelRes)
+            val time = if (mins < 60) c.getString(R.string.in_minutes, mins)
+            else c.getString(R.string.in_time, mins / 60, mins % 60)
+            "$label · $time"
         } else c.getString(R.string.no_times)
         val cells = rows.map { c.getString(it.key.labelRes) to it.value.toString() }
         val compactTimes = rows.joinToString(" · ") { it.value.toString() }
@@ -95,8 +103,13 @@ object Alarms {
             table(cells.map { it.first }, cells.map { it.second })
         } else small(nextLine)
 
+        val mins = next?.let { Duration.between(now, it.at).toMinutes() }
+        val icon = if (mins != null && mins < 60) {
+            IconCompat.createWithBitmap(minuteIcon(mins))
+        } else null
+
         val n = NotificationCompat.Builder(ctx, CH_STATUS)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(icon ?: IconCompat.createWithResource(ctx, R.drawable.ic_notification))
             .setContentTitle(if (hasTimes) small(nextLine) else null)
             .setContentText(if (hasTimes) small(compactTimes) else small(nextLine))
             .setStyle(NotificationCompat.BigTextStyle().bigText(bigContent))
@@ -108,6 +121,20 @@ object Alarms {
             .build()
         nm.notify(NOTIF_STATUS, n)
         scheduleTick(ctx)
+    }
+
+    /** Renders the remaining minutes as a small white status-bar icon. */
+    private fun minuteIcon(mins: Long): Bitmap {
+        val size = 96
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 60f
+            typeface = Typeface.DEFAULT_BOLD
+            textAlign = Paint.Align.CENTER
+        }
+        Canvas(bmp).drawText(mins.toString(), size / 2f, size / 2f + 20f, paint)
+        return bmp
     }
 
     fun showAdhan(ctx: Context, prayerName: String) {
