@@ -123,11 +123,8 @@ object Alarms {
         val header = if (next != null) {
             val label = c.getString(next.prayer.labelRes)
             val prayerLine = "$label: ${next.at.format(HM)}"
-            if (city != null) {
-                val maxCityChars = 16
-                val shortCity = if (city.length > maxCityChars) city.take(maxCityChars - 1).trimEnd() + "…" else city
-                "$shortCity · $prayerLine"
-            } else prayerLine
+            // City goes last so the system ellipsis cuts the city, not the prayer time.
+            if (city != null) "$prayerLine · $city" else prayerLine
         } else c.getString(R.string.no_times)
         val cells = rows.map { c.getString(it.key.labelRes) to it.value.toString() }
         val currentIdx = rows.indexOfLast { !it.value.isAfter(now.toLocalTime()) }
