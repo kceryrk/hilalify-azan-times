@@ -7,6 +7,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,6 +74,7 @@ fun QiblaScreen() {
 
     Column(
         Modifier.fillMaxSize().padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 120.dp),
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(stringResource(R.string.qibla), style = MaterialTheme.typography.headlineMedium)

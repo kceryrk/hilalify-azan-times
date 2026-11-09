@@ -36,6 +36,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -85,6 +86,7 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 gps = it
                 onGpsToggle(it)
             }
+            RowDivider()
             if (gps) {
                 Text(
                     PrayerRepo.locationLabel(ctx)?.let { stringResource(R.string.gps_city, it) }
@@ -105,6 +107,7 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                     Chevron()
                 }
             }
+            RowDivider()
             PrefChoice(
                 stringResource(R.string.language),
                 AppSettings.str(ctx, "language", "system"),
@@ -124,6 +127,7 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 AppSettings.put(ctx, "theme", it)
                 onRecreate()
             }
+            RowDivider()
             Text(
                 stringResource(R.string.accent),
                 style = MaterialTheme.typography.bodyLarge,
@@ -178,6 +182,7 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                     PrayerWidget.refreshAll(ctx.applicationContext)
                 }.start()
             }
+            RowDivider()
             PrefChoice(
                 stringResource(R.string.refresh),
                 AppSettings.refreshHours(ctx).toString(),
@@ -189,7 +194,8 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
         }
 
         Section(R.string.sec_alarms) {
-            Prayer.values().filter { it.notify }.forEach { p ->
+            Prayer.values().filter { it.notify }.forEachIndexed { i, p ->
+                if (i > 0) RowDivider()
                 PrefSwitch(stringResource(R.string.alarm_for, stringResource(p.labelRes)), "alarm_${p.name}") {
                     Alarms.scheduleNext(ctx)
                 }
@@ -198,16 +204,24 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
 
         Section(R.string.sec_notif) {
             PrefSwitch(stringResource(R.string.notif_on), "notif_on") { Alarms.updateStatus(ctx) }
+            RowDivider()
             PrefSwitch(stringResource(R.string.notif_transparent), "notif_transparent") { Alarms.updateStatus(ctx) }
+            RowDivider()
             PrefSwitch(stringResource(R.string.notif_title), "notif_title") { Alarms.updateStatus(ctx) }
+            RowDivider()
             PrefSwitch(stringResource(R.string.notif_next), "notif_next") { Alarms.updateStatus(ctx) }
+            RowDivider()
             PrefSwitch(stringResource(R.string.notif_countdown), "notif_countdown") { Alarms.updateStatus(ctx) }
+            RowDivider()
             PrefSwitch(stringResource(R.string.notif_times), "notif_times") { Alarms.updateStatus(ctx) }
+            RowDivider()
             PrefSwitch(stringResource(R.string.notif_columns), "notif_columns") { Alarms.updateStatus(ctx) }
+            RowDivider()
             PrefSwitch(stringResource(R.string.kerahat_setting), "kerahat", def = false) {
                 Alarms.updateStatus(ctx)
                 PrayerWidget.refreshAll(ctx)
             }
+            RowDivider()
             var kerahatMin by remember { mutableFloatStateOf(AppSettings.int(ctx, "kerahat_min", 45).toFloat()) }
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
@@ -245,7 +259,9 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                     }
                 )
             }
+            RowDivider()
             PrefSwitch(stringResource(R.string.widget_show_next), "widget_next") { PrayerWidget.refreshAll(ctx) }
+            RowDivider()
             PrefSwitch(stringResource(R.string.widget_show_times), "widget_times") { PrayerWidget.refreshAll(ctx) }
         }
 
@@ -256,6 +272,7 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
             var checkMessage by remember { mutableStateOf<String?>(null) }
             var update by remember { mutableStateOf<UpdateInfo?>(null) }
             PrefSwitch(stringResource(R.string.updates_on), "updates_on") { }
+            RowDivider()
             Button(
                 onClick = {
                     checking = true
@@ -279,6 +296,7 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 )
             }
             update?.let { UpdateDialog(it) { update = null } }
+            RowDivider()
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -300,6 +318,14 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
             }
         }
     }
+}
+
+@Composable
+private fun RowDivider() {
+    HorizontalDivider(
+        Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    )
 }
 
 @Composable

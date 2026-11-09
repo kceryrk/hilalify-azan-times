@@ -15,6 +15,7 @@
     <string name="next_prayer">%1$s</string>
     <string name="choose_city">Choose city</string>
     <string name="countdown_hm">%1$d sa %2$02d dk kaldı</string>
+    <string name="in_time_short">%1$d dk kaldı</string>
     <string name="countdown_m">%1$d dk kaldı</string>
     <string name="countdown_ms">%1$d dk %2$02d sn kaldı</string>
     <string name="no_times">Vakitler henüz alınamadı</string>
@@ -107,6 +108,7 @@
     <string name="zikir_save">Kaydet</string>
     <string name="zikir_history">Geçmiş</string>
     <string name="zikir_clear">Temizle</string>
+    <string name="zikir_continue_hint">Devam etmek için kayıtlı zikre dokunun</string>
     <string name="city_hint">En az 3 harf yazın</string>
     <string name="saved_places">Kayıtlı yerler</string>
     <string name="zikir_hand_right">Sağ el</string>

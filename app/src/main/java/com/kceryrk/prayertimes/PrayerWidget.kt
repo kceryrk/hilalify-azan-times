@@ -39,6 +39,10 @@ class PrayerWidget : AppWidgetProvider() {
 
         private fun Int.dp(ctx: Context): Int = (this * ctx.resources.displayMetrics.density).toInt()
 
+        /** Hours are omitted when zero, so the countdown reads "in 26m" rather than "in 0h 26m". */
+        internal fun countdown(c: Context, mins: Long): String =
+            if (mins >= 60) c.getString(R.string.in_time, mins / 60, mins % 60) else c.getString(R.string.in_time_short, mins)
+
         private fun views(ctx: Context, opts: Bundle): RemoteViews {
             val c = AppSettings.localized(ctx)
             val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
@@ -46,12 +50,13 @@ class PrayerWidget : AppWidgetProvider() {
             val rv = RemoteViews(ctx.packageName, if (large) R.layout.widget_prayer_large else R.layout.widget_prayer)
             val opacity = AppSettings.int(ctx, "widget_opacity", 85)
             val night = ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
-            val fg = if (night) Color.WHITE else Color.BLACK
-            val dim = if (night) 0xB3FFFFFF.toInt() else 0xB3000000.toInt()
+            // Fixed dark blue with white text, matching the option widgets, so it reads the same in light and dark mode.
+            val fg = Color.WHITE
+            val dim = 0xB3FFFFFF.toInt()
             val accent = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
             val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
             // The background is its own layer, so opacity fades only the panel and never the text.
-            rv.setImageViewBitmap(R.id.widget_bg_img, background(ctx, minW, minH, opacity, night, accent))
+            rv.setImageViewBitmap(R.id.widget_bg_img, background(ctx, minW, minH, opacity, night, accent, fixedDarkBlue = true))
 
             val now = LocalDateTime.now()
             val next = PrayerRepo.upcoming(ctx, now)
@@ -77,12 +82,12 @@ class PrayerWidget : AppWidgetProvider() {
                 val mins = Duration.between(now, next.at).toMinutes()
                 rv.setTextViewText(
                     R.id.widget_next,
-                    "${c.getString(R.string.next_prayer, c.getString(next.prayer.labelRes))} · ${c.getString(R.string.in_time, mins / 60, mins % 60)}"
+                    "${c.getString(R.string.next_prayer, c.getString(next.prayer.labelRes))} · ${countdown(c, mins)}"
                 )
             } else {
                 rv.setTextViewText(R.id.widget_next, c.getString(R.string.no_times))
             }
-            rv.setTextViewTextSize(R.id.widget_next, TypedValue.COMPLEX_UNIT_SP, if (large) 22f else if (compact) 12f else 13f)
+            rv.setTextViewTextSize(R.id.widget_next, TypedValue.COMPLEX_UNIT_SP, if (large) 26f else if (compact) 16f else 18f)
             rv.setTextColor(R.id.widget_next, fg)
 
             val today = PrayerRepo.today(ctx)
@@ -90,8 +95,8 @@ class PrayerWidget : AppWidgetProvider() {
             val currentIdx = rows.indexOfLast { !it.value.isAfter(now.toLocalTime()) }
             val labelIds = intArrayOf(R.id.widget_l0, R.id.widget_l1, R.id.widget_l2, R.id.widget_l3, R.id.widget_l4, R.id.widget_l5)
             val timeIds = intArrayOf(R.id.widget_t0, R.id.widget_t1, R.id.widget_t2, R.id.widget_t3, R.id.widget_t4, R.id.widget_t5)
-            val labelTextSize = if (compact) 8.5f else 9f
-            val timeTextSize = if (compact) 11.5f else 12f
+            val labelTextSize = if (compact) 10f else 11f
+            val timeTextSize = if (compact) 13f else 14f
             for (i in labelIds.indices) {
                 val row = rows.getOrNull(i)
                 val isCurrent = i == currentIdx

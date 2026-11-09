@@ -17,11 +17,11 @@ import java.time.LocalDateTime
 /** Shared 2x2 widget variants: list, grid and ring. Each provider only supplies its layout. */
 abstract class OptionWidget(private val layoutRes: Int) : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        ids.forEach { id -> manager.updateAppWidget(id, optionViews(context, manager.getAppWidgetOptions(id), layoutRes)) }
+        ids.forEach { id -> manager.updateAppWidget(id, optionViews(context, layoutRes)) }
     }
 
     override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, newOptions: Bundle) {
-        manager.updateAppWidget(id, optionViews(context, newOptions, layoutRes))
+        manager.updateAppWidget(id, optionViews(context, layoutRes))
     }
 }
 
@@ -34,27 +34,30 @@ private val optionProviders = listOf(
     PrayerGridWidget::class.java to R.layout.widget_opt_grid,
     PrayerRingWidget::class.java to R.layout.widget_opt_ring
 )
+private const val OPTION_SIDE_DP = 180
 private val labelIds = intArrayOf(R.id.opt_l0, R.id.opt_l1, R.id.opt_l2, R.id.opt_l3, R.id.opt_l4, R.id.opt_l5)
 private val timeIds = intArrayOf(R.id.opt_t0, R.id.opt_t1, R.id.opt_t2, R.id.opt_t3, R.id.opt_t4, R.id.opt_t5)
+private val tileIds = intArrayOf(R.id.opt_tb0, R.id.opt_tb1, R.id.opt_tb2, R.id.opt_tb3, R.id.opt_tb4, R.id.opt_tb5)
+private const val DARK_TEXT = 0xFF0A1633.toInt()
+private const val TILE_FILL = 0x1AFFFFFF
 
 fun refreshOptionWidgets(ctx: Context) {
     val mgr = AppWidgetManager.getInstance(ctx)
     optionProviders.forEach { (cls, layout) ->
-        mgr.getAppWidgetIds(ComponentName(ctx, cls)).forEach { mgr.updateAppWidget(it, optionViews(ctx, mgr.getAppWidgetOptions(it), layout)) }
+        mgr.getAppWidgetIds(ComponentName(ctx, cls)).forEach { mgr.updateAppWidget(it, optionViews(ctx, layout)) }
     }
 }
 
-private fun optionViews(ctx: Context, opts: Bundle, layoutRes: Int): RemoteViews {
+private fun optionViews(ctx: Context, layoutRes: Int): RemoteViews {
     val c = AppSettings.localized(ctx)
-    val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
-    val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
     val rv = RemoteViews(ctx.packageName, layoutRes)
     val opacity = AppSettings.int(ctx, "widget_opacity", 85)
     // Always dark blue with light text, so these widgets read the same in light and dark mode.
     val fg = Color.WHITE
     val dim = 0xB3FFFFFF.toInt()
     val accent = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
-    rv.setImageViewBitmap(R.id.opt_bg, PrayerWidget.background(ctx, minW, minH, opacity, true, accent, fixedDarkBlue = true))
+    // Fixed 1:1 square; the background is letterboxed (centerInside), never stretched.
+    rv.setImageViewBitmap(R.id.opt_bg, PrayerWidget.background(ctx, OPTION_SIDE_DP, OPTION_SIDE_DP, opacity, true, accent, fixedDarkBlue = true))
 
     val now = LocalDateTime.now()
     val next = PrayerRepo.upcoming(ctx, now)
@@ -64,16 +67,20 @@ private fun optionViews(ctx: Context, opts: Bundle, layoutRes: Int): RemoteViews
     rv.setTextViewText(R.id.opt_next, next?.let { c.getString(it.prayer.labelRes) } ?: c.getString(R.string.no_times))
     rv.setTextColor(R.id.opt_next, fg)
     val mins = next?.let { Duration.between(now, it.at).toMinutes() }
-    rv.setTextViewText(R.id.opt_count, mins?.let { c.getString(R.string.in_time, it / 60, it % 60) } ?: "")
+    rv.setTextViewText(R.id.opt_count, mins?.let { PrayerWidget.countdown(c, it) } ?: "")
     rv.setTextColor(R.id.opt_count, accent)
 
-    for (i in labelIds.indices) {
+    val isGrid = layoutRes == R.layout.widget_opt_grid
+    if (layoutRes != R.layout.widget_opt_ring) for (i in labelIds.indices) {
         val row = rows.getOrNull(i)
         val isCurrent = i == currentIdx
+        // The grid shows the next prayer as a solid accent tile, so its text switches to dark.
+        val onTile = isGrid && isCurrent
         rv.setTextViewText(labelIds[i], row?.let { c.getString(it.key.labelRes) } ?: "")
-        rv.setTextColor(labelIds[i], if (isCurrent) accent else dim)
+        rv.setTextColor(labelIds[i], if (onTile) DARK_TEXT else if (isCurrent) accent else dim)
         rv.setTextViewText(timeIds[i], row?.value?.toString() ?: "")
-        rv.setTextColor(timeIds[i], if (isCurrent) accent else fg)
+        rv.setTextColor(timeIds[i], if (onTile) DARK_TEXT else if (isCurrent) accent else fg)
+        if (isGrid) rv.setImageViewBitmap(tileIds[i], tileBitmap(ctx, if (isCurrent) accent else TILE_FILL))
     }
 
     if (layoutRes == R.layout.widget_opt_ring) {
@@ -83,9 +90,19 @@ private fun optionViews(ctx: Context, opts: Bundle, layoutRes: Int): RemoteViews
     return rv
 }
 
+/** Rounded tile background for the grid widget. */
+private fun tileBitmap(ctx: Context, fill: Int): Bitmap {
+    val size = (64 * ctx.resources.displayMetrics.density).toInt()
+    val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = fill }
+    val radius = size * 0.22f
+    Canvas(bmp).drawRoundRect(RectF(0f, 0f, size.toFloat(), size.toFloat()), radius, radius, paint)
+    return bmp
+}
+
 /** Progress ring from the previous prayer to the next one. */
 private fun ringBitmap(ctx: Context, prevAt: LocalDateTime?, nextAt: LocalDateTime?, now: LocalDateTime, accent: Int, track: Int): Bitmap {
-    val size = (120 * ctx.resources.displayMetrics.density).toInt()
+    val size = (150 * ctx.resources.displayMetrics.density).toInt()
     val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
     val stroke = size * 0.07f
