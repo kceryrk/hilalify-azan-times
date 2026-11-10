@@ -136,10 +136,18 @@ object PrayerRepo {
 
     private fun url(src: String, ym: YearMonth, method: Int): String {
         val (lat, lon) = src.substringAfter(':').split(",")
-        return "$API/calendar/${ym.year}/${ym.monthValue}?latitude=$lat&longitude=$lon&method=$method"
+        val base = "$API/calendar/${ym.year}/${ym.monthValue}?latitude=$lat&longitude=$lon"
+        if (method != 13) return "$base&method=$method"
+        // Apply Diyanet's official angle and temkin adjustments (16° Isha + wider horizon dip >= 45° latitude).
+        val highLat = kotlin.math.abs(lat.toDoubleOrNull() ?: 0.0) >= 45.0
+        return if (highLat) {
+            "$base&method=99&methodSettings=18,null,16&tune=0,0,-8,5,3,9,9,1,0"
+        } else {
+            "$base&method=13&tune=0,0,-7,5,4,8,8,1,0"
+        }
     }
 
-    private fun cacheKey(ctx: Context, src: String, ym: YearMonth) = "cache_${src}_m${AppSettings.method(ctx)}_$ym"
+    private fun cacheKey(ctx: Context, src: String, ym: YearMonth) = "cache_v2_${src}_m${AppSettings.method(ctx)}_$ym"
 
     private fun download(url: String): String? = try {
         val conn = URL(url).openConnection() as HttpURLConnection
