@@ -62,7 +62,8 @@ object UpdateChecker {
                         .firstOrNull { it.getString("name").endsWith(".apk") }
                         ?.getString("browser_download_url")
                 }
-                val turkish = java.util.Locale.getDefault().language == "tr"
+                val chosen = AppSettings.str(ctx, "language", "system")
+                val turkish = (if (chosen == "system") java.util.Locale.getDefault().language else chosen) == "tr"
                 val notes = if (newer.size == 1) {
                     notesFor(latest.optString("body"), turkish)
                 } else {
