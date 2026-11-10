@@ -182,13 +182,22 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 }.start()
             }
             RowDivider()
-            PrefChoice(
-                stringResource(R.string.refresh),
-                AppSettings.refreshHours(ctx).toString(),
-                listOf(Choice("6", R.string.refresh_6), Choice("12", R.string.refresh_12), Choice("24", R.string.refresh_24))
-            ) {
-                AppSettings.put(ctx, "refresh_hours", it.toInt())
-                RefreshWorker.schedule(ctx)
+            var refreshDays by remember { mutableFloatStateOf(AppSettings.refreshDays(ctx).toFloat()) }
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    "${stringResource(R.string.refresh)}: ${stringResource(R.string.refresh_days, refreshDays.roundToInt())}",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Slider(
+                    value = refreshDays,
+                    onValueChange = { refreshDays = it },
+                    valueRange = 1f..10f,
+                    steps = 8,
+                    onValueChangeFinished = {
+                        AppSettings.put(ctx, "refresh_days", refreshDays.roundToInt())
+                        RefreshWorker.schedule(ctx)
+                    }
+                )
             }
         }
 
@@ -204,19 +213,9 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
         Section(R.string.sec_notif) {
             PrefSwitch(stringResource(R.string.notif_on), "notif_on") { Alarms.updateStatus(ctx) }
             RowDivider()
-            PrefSwitch(stringResource(R.string.notif_transparent), "notif_transparent") { Alarms.updateStatus(ctx) }
-            RowDivider()
-            PrefSwitch(stringResource(R.string.notif_title), "notif_title") { Alarms.updateStatus(ctx) }
-            RowDivider()
-            PrefSwitch(stringResource(R.string.notif_next), "notif_next") { Alarms.updateStatus(ctx) }
-            RowDivider()
-            PrefSwitch(stringResource(R.string.notif_countdown), "notif_countdown") { Alarms.updateStatus(ctx) }
-            RowDivider()
             PrefSwitch(stringResource(R.string.notif_times), "notif_times") { Alarms.updateStatus(ctx) }
             RowDivider()
-            PrefSwitch(stringResource(R.string.notif_columns), "notif_columns") { Alarms.updateStatus(ctx) }
-            RowDivider()
-            PrefSwitch(stringResource(R.string.kerahat_setting), "kerahat", def = false) {
+            PrefSwitch(stringResource(R.string.kerahat_setting), "kerahat", def = true) {
                 Alarms.updateStatus(ctx)
                 PrayerWidget.refreshAll(ctx)
             }
@@ -242,7 +241,7 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
         }
 
         Section(R.string.sec_widget) {
-            var opacity by remember { mutableFloatStateOf(AppSettings.int(ctx, "widget_opacity", 85).toFloat()) }
+            var opacity by remember { mutableFloatStateOf(AppSettings.int(ctx, "widget_opacity", 100).toFloat()) }
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     "${stringResource(R.string.widget_opacity)}: ${opacity.roundToInt()}%",

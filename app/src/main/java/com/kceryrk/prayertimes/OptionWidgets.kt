@@ -51,7 +51,7 @@ fun refreshOptionWidgets(ctx: Context) {
 private fun optionViews(ctx: Context, layoutRes: Int): RemoteViews {
     val c = AppSettings.localized(ctx)
     val rv = RemoteViews(ctx.packageName, layoutRes)
-    val opacity = AppSettings.int(ctx, "widget_opacity", 85)
+    val opacity = AppSettings.int(ctx, "widget_opacity", 100)
     // Always dark blue with light text, so these widgets read the same in light and dark mode.
     val fg = Color.WHITE
     val dim = 0xB3FFFFFF.toInt()

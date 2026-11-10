@@ -84,8 +84,12 @@ object Alarms {
             .putExtra("prayer", next.prayer.name)
         val pi = PendingIntent.getBroadcast(ctx, REQ_ADHAN, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val millis = next.at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
+        if (exactAllowed(am)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
     }
+
+    private fun exactAllowed(am: AlarmManager): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()
 
     /**
      * Schedules a tick at the next minute boundary to refresh the notification icon.
@@ -98,7 +102,7 @@ object Alarms {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val nextMinute = (System.currentTimeMillis() / 60_000 + 1) * 60_000
-        val exactAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()
+        val exactAllowed = exactAllowed(am)
         if (exactAllowed) am.setExactAndAllowWhileIdle(AlarmManager.RTC, nextMinute, pi)
         else am.setAndAllowWhileIdle(AlarmManager.RTC, nextMinute, pi)
     }
@@ -137,22 +141,12 @@ object Alarms {
         val icon = if (mins != null && mins < 60) {
             IconCompat.createWithBitmap(minuteIcon(mins))
         } else null
-        // The system chronometer counts down to the next prayer itself, so it stays live between app updates.
-        val nextMillis = next?.at?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
-            ?.takeIf { it > System.currentTimeMillis() }
-
+        // Countdown text is localized and refreshed by the minute tick; the system chronometer is not used because it
+        // renders English "1h 20m" and runs past zero.
         val n = NotificationCompat.Builder(ctx, CH_STATUS)
             .setSmallIcon(icon ?: IconCompat.createWithResource(ctx, R.drawable.ic_notification))
             .setContentTitle(if (hasTimes) small(header) else null)
             .setContentText(small(kerahatText ?: remainingText(c, mins, header)))
-            .apply {
-                if (nextMillis != null) {
-                    setUsesChronometer(true)
-                    setChronometerCountDown(true)
-                    setShowWhen(true)
-                    setWhen(nextMillis)
-                }
-            }
             .apply {
                 if (hasTimes) setCustomBigContentView(timesView(ctx, cells, currentIdx, kerahatText))
                 else setStyle(NotificationCompat.BigTextStyle().bigText(bigContent))

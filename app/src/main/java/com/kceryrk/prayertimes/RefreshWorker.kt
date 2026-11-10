@@ -18,10 +18,10 @@ class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
     }
 
     companion object {
-        /** Refreshes the cached calendar at the interval set in settings (6, 12 or 24 hours). */
+        /** Refreshes the cached calendar in the background at the interval set in settings (1–10 days). */
         fun schedule(ctx: Context) {
-            val hours = AppSettings.refreshHours(ctx).toLong()
-            val req = PeriodicWorkRequestBuilder<RefreshWorker>(hours, TimeUnit.HOURS).build()
+            val days = AppSettings.refreshDays(ctx).toLong()
+            val req = PeriodicWorkRequestBuilder<RefreshWorker>(days, TimeUnit.DAYS).build()
             WorkManager.getInstance(ctx).enqueueUniquePeriodicWork("prayer-refresh", ExistingPeriodicWorkPolicy.UPDATE, req)
         }
     }

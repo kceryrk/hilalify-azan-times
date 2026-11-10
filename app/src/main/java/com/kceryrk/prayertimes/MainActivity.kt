@@ -376,6 +376,8 @@ class MainActivity : ComponentActivity() {
             } else {
                 val listShape = RoundedCornerShape(20.dp)
                 val prayers = Prayer.values()
+                val kerWins = Kerahat.windows(this@MainActivity)
+                val kerahatBand = accent.copy(alpha = 0.6f)
                 val rimTop = MaterialTheme.colorScheme.outlineVariant
                 Column(
                     Modifier
@@ -407,6 +409,16 @@ class MainActivity : ComponentActivity() {
                         val isCurrent = p == current
                         val highlighted = isCurrent
                         val isPast = current != null && i < prayers.indexOf(current)
+                        val rowStart = times[p]!!.toSecondOfDay()
+                        val rowTotal = (((times[prayers[(i + 1) % prayers.size]]?.toSecondOfDay() ?: rowStart) - rowStart + 86400) % 86400).coerceAtLeast(1)
+                        // Kerahat windows as fractions of this row's time span, from its top (start) to bottom (end).
+                        val bands = kerWins.mapNotNull { (s, e) ->
+                            val a = (s.toLocalTime().toSecondOfDay() - rowStart + 86400) % 86400
+                            val bRaw = (e.toLocalTime().toSecondOfDay() - rowStart + 86400) % 86400
+                            val b = if (bRaw == 0) 86400 else bRaw
+                            if (a >= rowTotal || b <= a) null
+                            else a.toFloat() / rowTotal to minOf(b, rowTotal).toFloat() / rowTotal
+                        }
                         val timeLeft: Float? = if (isCurrent && times != null && upcoming != null) {
                             val startSec = times[p]!!.toSecondOfDay()
                             val nextSec = upcoming.at.toLocalTime().toSecondOfDay()
@@ -417,6 +429,13 @@ class MainActivity : ComponentActivity() {
                         Row(
                             Modifier
                                 .fillMaxWidth()
+                                .drawBehind {
+                                    val bw = 4.dp.toPx()
+                                    val bx = size.width - 6.dp.toPx()
+                                    bands.forEach { (f1, f2) ->
+                                        drawRect(kerahatBand, topLeft = Offset(bx, size.height * f1), size = Size(bw, size.height * (f2 - f1)))
+                                    }
+                                }
                                 .background(if (isCurrent) accent.copy(alpha = 0.22f) else Color.Transparent)
                                 .then(
                                     if (timeLeft != null) Modifier.drawBehind {

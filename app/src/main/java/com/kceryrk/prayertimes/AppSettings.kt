@@ -26,7 +26,7 @@ object AppSettings {
     }
 
     fun method(ctx: Context): Int = int(ctx, "method", 13)
-    fun refreshHours(ctx: Context): Int = int(ctx, "refresh_hours", 6)
+    fun refreshDays(ctx: Context): Int = int(ctx, "refresh_days", 10).coerceIn(1, 10)
     fun alarmOn(ctx: Context, p: Prayer): Boolean = bool(ctx, "alarm_${p.name}")
     fun updatesEnabled(ctx: Context): Boolean = bool(ctx, "updates_on")
 

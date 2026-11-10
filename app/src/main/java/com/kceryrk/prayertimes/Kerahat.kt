@@ -15,20 +15,23 @@ object Kerahat {
      * The kerahat window containing [now], as (start, end), or null when the setting is off or no window is active.
      * Windows: N min after sunrise, N min before Dhuhr, and N min before Maghrib, where N is the "kerahat_min" setting.
      */
-    fun active(ctx: Context, now: LocalDateTime = LocalDateTime.now()): Pair<LocalDateTime, LocalDateTime>? {
-        if (!AppSettings.bool(ctx, "kerahat", false)) return null
-        val t = PrayerRepo.today(ctx) ?: return null
+    fun active(ctx: Context, now: LocalDateTime = LocalDateTime.now()): Pair<LocalDateTime, LocalDateTime>? =
+        windows(ctx).firstOrNull { now >= it.first && now < it.second }
+
+    /** Today's kerahat windows, empty when the setting is off or times are unavailable. */
+    fun windows(ctx: Context): List<Pair<LocalDateTime, LocalDateTime>> {
+        if (!AppSettings.bool(ctx, "kerahat", true)) return emptyList()
+        val t = PrayerRepo.today(ctx) ?: return emptyList()
         val day = LocalDate.now()
-        val sunrise = t[Prayer.SUNRISE] ?: return null
-        val dhuhr = t[Prayer.DHUHR] ?: return null
-        val maghrib = t[Prayer.MAGHRIB] ?: return null
+        val sunrise = t[Prayer.SUNRISE] ?: return emptyList()
+        val dhuhr = t[Prayer.DHUHR] ?: return emptyList()
+        val maghrib = t[Prayer.MAGHRIB] ?: return emptyList()
         val window = AppSettings.int(ctx, "kerahat_min", 45).coerceIn(20, 60).toLong()
-        val windows = listOf(
+        return listOf(
             day.atTime(sunrise) to day.atTime(sunrise).plusMinutes(window),
             day.atTime(dhuhr).minusMinutes(window) to day.atTime(dhuhr),
             day.atTime(maghrib).minusMinutes(window) to day.atTime(maghrib),
         )
-        return windows.firstOrNull { now >= it.first && now < it.second }
     }
 
     /** Short status such as "Kerahat vakti · 12 dk kaldı", with the time left until the window ends. */

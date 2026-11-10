@@ -40,15 +40,17 @@ class PrayerWidget : AppWidgetProvider() {
         private fun Int.dp(ctx: Context): Int = (this * ctx.resources.displayMetrics.density).toInt()
 
         /** Hours are omitted when zero, so the countdown reads "in 26m" rather than "in 0h 26m". */
-        internal fun countdown(c: Context, mins: Long): String =
-            if (mins >= 60) c.getString(R.string.in_time, mins / 60, mins % 60) else c.getString(R.string.in_time_short, mins)
+        internal fun countdown(c: Context, mins: Long): String {
+            val m = mins.coerceAtLeast(0)
+            return if (m >= 60) c.getString(R.string.countdown_hm, m / 60, m % 60) else c.getString(R.string.countdown_m, m)
+        }
 
         private fun views(ctx: Context, opts: Bundle): RemoteViews {
             val c = AppSettings.localized(ctx)
             val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
             val large = minH >= 120
             val rv = RemoteViews(ctx.packageName, if (large) R.layout.widget_prayer_large else R.layout.widget_prayer)
-            val opacity = AppSettings.int(ctx, "widget_opacity", 85)
+            val opacity = AppSettings.int(ctx, "widget_opacity", 100)
             val night = ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
             // Fixed dark blue with white text, matching the option widgets, so it reads the same in light and dark mode.
             val fg = Color.WHITE
