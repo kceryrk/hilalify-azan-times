@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.core.content.FileProvider
-import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -14,7 +13,7 @@ import java.net.URL
 data class UpdateInfo(val version: String, val pageUrl: String, val apkUrl: String?, val notes: String)
 
 object UpdateChecker {
-    private const val LATEST_URL = "https://api.github.com/repos/kceryrk/hilalify-azan-times/releases/latest"
+    private const val LIST_URL = "https://api.github.com/repos/kceryrk/hilalify-azan-times/releases?per_page=30"
     private val sectionMarker = Regex("(?im)^##\\s*(English|T[üu]rk[çc]e|Turkish)\\s*$")
 
     /**
@@ -33,29 +32,45 @@ object UpdateChecker {
         return body.substring(start, end).trim()
     }
 
-    /** Returns the latest release if it is newer than the installed version, otherwise null. */
+    /**
+     * Returns the latest release if it is newer than the installed version, otherwise null.
+     * The notes include every published release between the installed version and the latest,
+     * newest first.
+     */
     suspend fun check(ctx: Context): UpdateInfo? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         runCatching {
-            val conn = (URL(LATEST_URL).openConnection() as HttpURLConnection).apply {
+            val conn = (URL(LIST_URL).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 10_000
                 setRequestProperty("Accept", "application/vnd.github+json")
             }
             try {
                 if (conn.responseCode != 200) return@runCatching null
-                val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-                val tag = json.getString("tag_name").removePrefix("v")
+                val releases = org.json.JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
                 val installed = ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: return@runCatching null
-                if (compareVersions(tag, installed) > 0) {
-                    val apk = json.optJSONArray("assets")?.let { assets ->
-                        (0 until assets.length())
-                            .map { assets.getJSONObject(it) }
-                            .firstOrNull { it.getString("name").endsWith(".apk") }
-                            ?.getString("browser_download_url")
+                val newer = (0 until releases.length())
+                    .map { releases.getJSONObject(it) }
+                    .filter { !it.optBoolean("draft") && !it.optBoolean("prerelease") }
+                    .map { it.getString("tag_name").removePrefix("v") to it }
+                    .filter { compareVersions(it.first, installed) > 0 }
+                    .sortedWith { a, b -> compareVersions(b.first, a.first) }
+                if (newer.isEmpty()) return@runCatching null
+                val (tag, latest) = newer.first()
+                val apk = latest.optJSONArray("assets")?.let { assets ->
+                    (0 until assets.length())
+                        .map { assets.getJSONObject(it) }
+                        .firstOrNull { it.getString("name").endsWith(".apk") }
+                        ?.getString("browser_download_url")
+                }
+                val turkish = java.util.Locale.getDefault().language == "tr"
+                val notes = if (newer.size == 1) {
+                    notesFor(latest.optString("body"), turkish)
+                } else {
+                    newer.joinToString("\n\n") { (version, release) ->
+                        "### $version\n" + notesFor(release.optString("body"), turkish)
                     }
-                    val turkish = java.util.Locale.getDefault().language == "tr"
-                    UpdateInfo(tag, json.getString("html_url"), apk, notesFor(json.optString("body"), turkish))
-                } else null
+                }
+                UpdateInfo(tag, latest.getString("html_url"), apk, notes)
             } finally {
                 conn.disconnect()
             }

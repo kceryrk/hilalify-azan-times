@@ -86,6 +86,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -379,9 +380,13 @@ class MainActivity : ComponentActivity() {
                 val kerWins = Kerahat.windows(this@MainActivity)
                 val kerahatBand = accent.copy(alpha = 0.6f)
                 val rimTop = MaterialTheme.colorScheme.outlineVariant
+                val rowRects = remember { mutableStateMapOf<Int, Pair<Float, Float>>() }
+                val rowBands = HashMap<Int, List<Pair<Float, Float>>>()
+                var listTop by remember { mutableFloatStateOf(0f) }
                 Column(
                     Modifier
                         .fillMaxWidth()
+                        .onGloballyPositioned { listTop = it.positionInRoot().y }
                         .shadow(12.dp, listShape, spotColor = Color.Black.copy(alpha = 0.6f))
                         .clip(listShape)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f))
@@ -402,6 +407,16 @@ class MainActivity : ComponentActivity() {
                             while (dotY < size.height) {
                                 drawCircle(accent.copy(alpha = 0.35f), radius = 1.dp.toPx(), center = Offset(dotX, dotY))
                                 dotY += step
+                            }
+                            // Kerahat bands sit on the same track x as the dots.
+                            val bw = 3.dp.toPx()
+                            val bx = dotX - bw / 2
+                            rowBands.forEach { (i, bands) ->
+                                val (top, h) = rowRects[i] ?: return@forEach
+                                val y0 = top - listTop
+                                bands.forEach { (f1, f2) ->
+                                    drawRect(kerahatBand, topLeft = Offset(bx, y0 + h * f1), size = Size(bw, h * (f2 - f1)))
+                                }
                             }
                         }
                 ) {
@@ -426,9 +441,11 @@ class MainActivity : ComponentActivity() {
                             val total = ((nextSec - startSec + 86400) % 86400).coerceAtLeast(1)
                             (((nextSec - nowSec + 86400) % 86400).toFloat() / total).coerceIn(0f, 1f)
                         } else null
+                        rowBands[i] = bands
                         Row(
                             Modifier
                                 .fillMaxWidth()
+                                .onGloballyPositioned { rowRects[i] = it.positionInRoot().y to it.size.height.toFloat() }
                                 .background(if (isCurrent) accent.copy(alpha = 0.22f) else Color.Transparent)
                                 .then(
                                     if (timeLeft != null) Modifier.drawBehind {
@@ -443,15 +460,6 @@ class MainActivity : ComponentActivity() {
                                     } else Modifier
                                 )
                                 .padding(horizontal = 20.dp, vertical = 15.dp)
-                                .drawWithContent {
-                                    drawContent()
-                                    // Centered on the dotted track (track is at width - 2dp).
-                                    val bw = 3.dp.toPx()
-                                    val bx = size.width - 2.dp.toPx() - bw / 2
-                                    bands.forEach { (f1, f2) ->
-                                        drawRect(kerahatBand, topLeft = Offset(bx, size.height * f1), size = Size(bw, size.height * (f2 - f1)))
-                                    }
-                                }
                         ) {
 
                             Text(
