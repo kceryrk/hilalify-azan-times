@@ -1,12 +1,16 @@
 package com.kceryrk.prayertimes
 
 import android.app.AlarmManager
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -14,12 +18,16 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Build
-import android.view.View
-import android.widget.RemoteViews
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
+import android.view.View
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.IconCompat
 import java.time.Duration
 import java.time.LocalDateTime
@@ -28,7 +36,6 @@ import java.time.format.DateTimeFormatter
 
 /**
  * Schedules adhan notifications and the permanent prayer-times notification.
- * Uses inexact alarms so they don't need the exact-alarm permission.
  */
 object Alarms {
     const val CH_ADHAN = "adhan"
@@ -84,38 +91,39 @@ object Alarms {
             .putExtra("prayer", next.prayer.name)
         val pi = PendingIntent.getBroadcast(ctx, REQ_ADHAN, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val millis = next.at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        if (exactAllowed(am)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
-        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
+        try {
+            if (exactAllowed(am)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
+            else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
+        } catch (_: SecurityException) {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
+        }
     }
 
     private fun exactAllowed(am: AlarmManager): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()
 
-    /**
-     * Schedules a tick at the next minute boundary to refresh the notification icon.
-     * Uses an exact alarm when the user has allowed it, since OEM battery managers often delay inexact ones.
-     */
-    fun scheduleTick(ctx: Context) {
-        val am = ctx.getSystemService(AlarmManager::class.java)
-        val pi = PendingIntent.getBroadcast(
+    private fun tickPendingIntent(ctx: Context): PendingIntent =
+        PendingIntent.getBroadcast(
             ctx, REQ_TICK, Intent(ctx, TickReceiver::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
+    /**
+     * Schedules a wake-up tick at the next minute boundary to refresh the notification and widgets.
+     */
+    fun scheduleTick(ctx: Context) {
+        val am = ctx.getSystemService(AlarmManager::class.java)
+        val pi = tickPendingIntent(ctx)
         val nextMinute = (System.currentTimeMillis() / 60_000 + 1) * 60_000
-        val exactAllowed = exactAllowed(am)
-        if (exactAllowed) am.setExactAndAllowWhileIdle(AlarmManager.RTC, nextMinute, pi)
-        else am.setAndAllowWhileIdle(AlarmManager.RTC, nextMinute, pi)
+        try {
+            if (exactAllowed(am)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextMinute, pi)
+            else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextMinute, pi)
+        } catch (_: SecurityException) {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextMinute, pi)
+        }
     }
 
-    /** Shows or cancels the permanent notification, honouring the show/hide settings. */
-    fun updateStatus(ctx: Context) {
-        val nm = ctx.getSystemService(NotificationManager::class.java)
-        if (!AppSettings.bool(ctx, "notif_on")) {
-            nm.cancel(NOTIF_STATUS)
-            return
-        }
-        // Re-arm the minute tick first so a rendering failure can't stop the background refresh chain.
-        scheduleTick(ctx)
+    fun buildStatusNotification(ctx: Context): Notification {
         val c = AppSettings.localized(ctx)
         val now = LocalDateTime.now()
         val next = PrayerRepo.upcoming(ctx, now)
@@ -141,9 +149,9 @@ object Alarms {
         val icon = if (mins != null && mins < 60) {
             IconCompat.createWithBitmap(minuteIcon(mins))
         } else null
-        // Countdown text is localized and refreshed by the minute tick; the system chronometer is not used because it
+        // Countdown text is localized and refreshed every minute; the system chronometer is not used because it
         // renders English "1h 20m" and runs past zero.
-        val n = NotificationCompat.Builder(ctx, CH_STATUS)
+        return NotificationCompat.Builder(ctx, CH_STATUS)
             .setSmallIcon(icon ?: IconCompat.createWithResource(ctx, R.drawable.ic_notification))
             .setContentTitle(if (hasTimes) small(header) else null)
             .setContentText(small(kerahatText ?: remainingText(c, mins, header)))
@@ -155,9 +163,28 @@ object Alarms {
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(launchIntent(ctx))
+            .setDeleteIntent(tickPendingIntent(ctx))
             .build()
+    }
+
+    /** Shows or cancels the permanent notification, honouring the show/hide settings. */
+    fun updateStatus(ctx: Context) {
+        createChannels(ctx)
+        val nm = ctx.getSystemService(NotificationManager::class.java)
+        if (!AppSettings.bool(ctx, "notif_on")) {
+            nm.cancel(NOTIF_STATUS)
+            try {
+                ctx.stopService(Intent(ctx, CountdownService::class.java))
+            } catch (_: Exception) {}
+            return
+        }
+        // Re-arm the minute tick first so a rendering failure can't stop the background refresh chain.
+        scheduleTick(ctx)
+        val n = buildStatusNotification(ctx)
         nm.notify(NOTIF_STATUS, n)
+        CountdownService.ensureRunning(ctx)
     }
 
     /** Line under the header: "N min left" until the next prayer, falling back to the header text. */
@@ -189,6 +216,7 @@ object Alarms {
     }
 
     fun showAdhan(ctx: Context, prayerName: String) {
+        createChannels(ctx)
         val prayer = Prayer.valueOf(prayerName)
         val nm = ctx.getSystemService(NotificationManager::class.java)
         val c = AppSettings.localized(ctx)
@@ -209,6 +237,98 @@ object Alarms {
         )
 }
 
+/**
+ * Lightweight foreground service bound to [Alarms.NOTIF_STATUS] that listens to system [Intent.ACTION_TIME_TICK]
+ * and screen-wake events so the live countdown notification and widgets update every minute even when the app is closed.
+ */
+class CountdownService : Service() {
+    private val handler = Handler(Looper.getMainLooper())
+    private val minuteTicker = object : Runnable {
+        override fun run() {
+            if (!AppSettings.bool(this@CountdownService, "notif_on")) {
+                stopSelf()
+                return
+            }
+            Alarms.updateStatus(this@CountdownService)
+            PrayerWidget.refreshAll(this@CountdownService)
+            val delayMs = 60_000L - (System.currentTimeMillis() % 60_000L) + 50L
+            handler.postDelayed(this, delayMs)
+        }
+    }
+
+    private val timeTickReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            Alarms.updateStatus(context)
+            PrayerWidget.refreshAll(context)
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        running = true
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_TICK)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        ContextCompat.registerReceiver(this, timeTickReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        val delayMs = 60_000L - (System.currentTimeMillis() % 60_000L) + 50L
+        handler.postDelayed(minuteTicker, delayMs)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!AppSettings.bool(this, "notif_on")) {
+            running = false
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        Alarms.createChannels(this)
+        val notif = Alarms.buildStatusNotification(this)
+        try {
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(Alarms.NOTIF_STATUS, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            } else {
+                startForeground(Alarms.NOTIF_STATUS, notif)
+            }
+        } catch (_: Exception) {}
+        return START_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        if (AppSettings.bool(this, "notif_on")) {
+            Alarms.scheduleTick(this)
+            Alarms.updateStatus(this)
+        }
+    }
+
+    override fun onDestroy() {
+        running = false
+        handler.removeCallbacks(minuteTicker)
+        try {
+            unregisterReceiver(timeTickReceiver)
+        } catch (_: Exception) {}
+        super.onDestroy()
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    companion object {
+        @Volatile
+        private var running = false
+
+        fun ensureRunning(ctx: Context) {
+            if (running || !AppSettings.bool(ctx, "notif_on")) return
+            try {
+                ContextCompat.startForegroundService(ctx.applicationContext, Intent(ctx.applicationContext, CountdownService::class.java))
+            } catch (_: Exception) {}
+        }
+    }
+}
+
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         Alarms.showAdhan(context, intent.getStringExtra("prayer") ?: return)
@@ -226,9 +346,9 @@ class TickReceiver : BroadcastReceiver() {
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         Alarms.scheduleNext(context)
         Alarms.updateStatus(context)
+        PrayerWidget.refreshAll(context)
         RefreshWorker.schedule(context)
     }
 }

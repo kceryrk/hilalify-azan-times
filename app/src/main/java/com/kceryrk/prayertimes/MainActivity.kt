@@ -2,6 +2,7 @@ package com.kceryrk.prayertimes
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Build
@@ -142,6 +143,14 @@ class MainActivity : ComponentActivity() {
     private var showCityDialog by mutableStateOf(false)
     private var refreshing by mutableStateOf(false)
     private var tick by mutableStateOf(0)
+    private var homeRequestTick by mutableStateOf(0)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra("open_home", false)) {
+            homeRequestTick++
+        }
+    }
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(AppSettings.localized(newBase))
@@ -243,6 +252,9 @@ class MainActivity : ComponentActivity() {
         val times = remember(tick, clock.toLocalDate()) { PrayerRepo.today(this) }
         val upcoming = remember(tick, clock) { PrayerRepo.upcoming(this, clock) }
         val pagerState = rememberPagerState(pageCount = { 3 })
+        LaunchedEffect(homeRequestTick) {
+            if (homeRequestTick > 0) pagerState.scrollToPage(0)
+        }
         val backdrop = rememberGraphicsLayer()
         val dialogSlot = remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
         val bgColor = MaterialTheme.colorScheme.background

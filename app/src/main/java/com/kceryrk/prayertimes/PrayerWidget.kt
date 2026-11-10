@@ -1,9 +1,11 @@
 package com.kceryrk.prayertimes
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -45,11 +47,25 @@ class PrayerWidget : AppWidgetProvider() {
             return if (m >= 60) c.getString(R.string.countdown_hm, m / 60, m % 60) else c.getString(R.string.countdown_m, m)
         }
 
+        internal fun homePendingIntent(ctx: Context): PendingIntent {
+            val intent = Intent(ctx, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra("open_home", true)
+            }
+            return PendingIntent.getActivity(
+                ctx, 3001, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
         private fun views(ctx: Context, opts: Bundle): RemoteViews {
             val c = AppSettings.localized(ctx)
             val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
             val large = minH >= 120
             val rv = RemoteViews(ctx.packageName, if (large) R.layout.widget_prayer_large else R.layout.widget_prayer)
+            val launch = homePendingIntent(ctx)
+            rv.setOnClickPendingIntent(R.id.widget_root, launch)
+            rv.setOnClickPendingIntent(R.id.widget_bg_img, launch)
             val opacity = AppSettings.int(ctx, "widget_opacity", 100)
             val night = ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
             // Fixed dark blue with white text, matching the option widgets, so it reads the same in light and dark mode.
