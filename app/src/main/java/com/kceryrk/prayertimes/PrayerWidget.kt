@@ -63,7 +63,7 @@ class PrayerWidget : AppWidgetProvider() {
             val now = LocalDateTime.now()
             val next = PrayerRepo.upcoming(ctx, now)
             val kerahat = Kerahat.active(ctx, now)
-            val compact = !large && minH in 1..75
+            val compact = !large && (minH in 1..75 || minH == 0)
             val showNext = AppSettings.bool(ctx, "widget_next") && (large || kerahat == null)
             val showTimes = AppSettings.bool(ctx, "widget_times")
             val padH = (if (large) 14 else 6).dp(ctx)
@@ -116,7 +116,7 @@ class PrayerWidget : AppWidgetProvider() {
         internal fun background(ctx: Context, minW: Int, minH: Int, opacity: Int, night: Boolean, accent: Int, fixedDarkBlue: Boolean = false): Bitmap {
             val d = ctx.resources.displayMetrics.density
             val w = (if (minW > 0) minW else 250) * d
-            val h = (if (minH > 0) minH else 110) * d
+            val h = (if (minH > 0) minH else 50) * d
             val scale = minOf(1f, sqrt(400_000f / (w * h * 4)))
             val bw = max(1, (w * scale).toInt())
             val bh = max(1, (h * scale).toInt())

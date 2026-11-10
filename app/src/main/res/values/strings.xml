@@ -112,4 +112,6 @@
     <string name="zikir_hand_right">Right hand</string>
     <string name="zikir_hand_left">Left hand</string>
     <string name="in_minutes">%1$d min</string>
+    <string name="widget_preview_next">Asr · in 1h 24m</string>
+    <string name="widget_preview_countdown">in 1h 24m</string>
 </resources>

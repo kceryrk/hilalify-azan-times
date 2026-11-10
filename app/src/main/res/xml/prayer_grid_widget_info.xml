@@ -8,5 +8,6 @@
     android:initialLayout="@layout/widget_opt_grid"
     android:resizeMode="none"
     android:widgetCategory="home_screen"
-    android:previewLayout="@layout/widget_opt_grid"
+    android:previewLayout="@layout/widget_opt_grid_preview"
+    android:previewImage="@drawable/widget_preview_bg"
     android:description="@string/widget_grid_desc" />
