@@ -149,13 +149,22 @@ object Alarms {
         val icon = if (mins != null && mins < 60) {
             IconCompat.createWithBitmap(minuteIcon(mins))
         } else null
-        // Countdown text is localized and refreshed every minute; the system chronometer is not used because it
-        // renders English "1h 20m" and runs past zero.
+        val nextMillis = next?.at?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+            ?.takeIf { it > System.currentTimeMillis() }
+
         return NotificationCompat.Builder(ctx, CH_STATUS)
             .setSmallIcon(icon ?: IconCompat.createWithResource(ctx, R.drawable.ic_notification))
             .setContentTitle(if (hasTimes) small(header) else null)
             .setContentText(small(kerahatText ?: remainingText(c, mins, header)))
             .apply {
+                if (nextMillis != null) {
+                    setUsesChronometer(true)
+                    setChronometerCountDown(true)
+                    setShowWhen(true)
+                    setWhen(nextMillis)
+                } else {
+                    setShowWhen(false)
+                }
                 if (hasTimes) setCustomBigContentView(timesView(ctx, cells, currentIdx, kerahatText))
                 else setStyle(NotificationCompat.BigTextStyle().bigText(bigContent))
             }

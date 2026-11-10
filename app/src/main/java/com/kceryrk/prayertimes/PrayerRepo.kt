@@ -174,6 +174,7 @@ object PrayerRepo {
             if (body != null) edit.putString(cacheKey(ctx, src, ym), body) else ok = false
         }
         edit.putBoolean(KEY_OK, ok).apply()
+        if (method == 13) DiyanetHijri.refresh(ctx)
         return ok
     }
 
@@ -193,6 +194,24 @@ object PrayerRepo {
     fun today(ctx: Context): Map<Prayer, LocalTime>? {
         val src = source(ctx) ?: return null
         return days(ctx, src, YearMonth.now())[LocalDate.now()]
+    }
+
+    /** Cached prayer times for any day in the downloaded months, or null when not cached. */
+    fun day(ctx: Context, date: LocalDate): Map<Prayer, LocalTime>? {
+        val src = source(ctx) ?: return null
+        return try { days(ctx, src, YearMonth.from(date))[date] } catch (_: Exception) { null }
+    }
+
+    /** Hijri date from the cached calendar, or null when the day isn't cached. */
+    fun hijri(ctx: Context, date: LocalDate): Hijri? {
+        if (AppSettings.method(ctx) == 13) DiyanetHijri.lookup(ctx, date)?.let { return it }
+        val src = source(ctx) ?: return null
+        val body = prefs(ctx).getString(cacheKey(ctx, src, YearMonth.from(date)), null) ?: return null
+        return try {
+            val h = JSONObject(body).getJSONArray("data").getJSONObject(date.dayOfMonth - 1)
+                .getJSONObject("date").getJSONObject("hijri")
+            Hijri(h.getString("day").toInt(), h.getJSONObject("month").getInt("number"), h.getString("year").toInt())
+        } catch (_: Exception) { null }
     }
 
     /** Next prayer after [now]. With [adhanOnly], Sunrise and prayers with alarms turned off are skipped. */

@@ -295,12 +295,19 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun TimesPage(times: Map<Prayer, java.time.LocalTime>?, upcoming: Upcoming?, clock: LocalDateTime) {
+    private fun TimesPage(todayTimes: Map<Prayer, java.time.LocalTime>?, upcoming: Upcoming?, clock: LocalDateTime) {
         val accent = accentColor()
         val sky = rememberSkyState()
         val nowTime = clock.toLocalTime()
-        val current = times?.filter { !it.value.isAfter(nowTime) }?.maxByOrNull { it.value }?.key
+        var dayOffset by remember { mutableStateOf(0) }
+        val viewDate = clock.toLocalDate().plusDays(dayOffset.toLong())
+        val times = if (dayOffset == 0) todayTimes else PrayerRepo.day(this@MainActivity, viewDate)
+        val current = if (dayOffset == 0) times?.filter { !it.value.isAfter(nowTime) }?.maxByOrNull { it.value }?.key else null
         val locale = resources.configuration.locales[0]
+        val isTr = locale.language == "tr"
+        val hijri = PrayerRepo.hijri(this@MainActivity, viewDate)
+        val todayHijri = PrayerRepo.hijri(this@MainActivity, clock.toLocalDate())
+        val occasion = todayHijri?.let { HijriInfo.nextOccasion(isTr, clock.toLocalDate(), it) }
         Column(
             Modifier
                 .fillMaxSize()
@@ -311,16 +318,16 @@ class MainActivity : ComponentActivity() {
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 HilalifyHeader(accent)
-                Column(horizontalAlignment = Alignment.End) {
+                if (occasion != null) Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        clock.format(DateTimeFormatter.ofPattern("EEEE", locale)),
+                        occasion.first,
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        clock.format(DateTimeFormatter.ofPattern("d MMMM", locale)),
+                        occasion.second,
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = accent
                     )
                 }
             }
@@ -341,9 +348,50 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.clickable { showCityDialog = true }
                 )
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
+            val canPrev = PrayerRepo.day(this@MainActivity, viewDate.minusDays(1)) != null
+            val canNext = PrayerRepo.day(this@MainActivity, viewDate.plusDays(1)) != null
+            val dim = MaterialTheme.colorScheme.onSurfaceVariant
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "‹",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = if (canPrev) accent else dim.copy(alpha = 0.3f),
+                    modifier = Modifier.clickable(enabled = canPrev) { dayOffset-- }.padding(horizontal = 12.dp)
+                )
+                Column(
+                    Modifier.weight(1f).clickable(enabled = dayOffset != 0) { dayOffset = 0 },
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (dayOffset != 0) Text(
+                        if (isTr) "Bugüne dön" else "Back to today",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = accent,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        viewDate.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", locale)),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (dayOffset == 0) dim else accent,
+                        textAlign = TextAlign.Center
+                    )
+                    if (hijri != null) Text(
+                        HijriInfo.label(isTr, hijri),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = dim.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+                Text(
+                    "›",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = if (canNext) accent else dim.copy(alpha = 0.3f),
+                    modifier = Modifier.clickable(enabled = canNext) { dayOffset++ }.padding(horizontal = 12.dp)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
 
-            if (upcoming != null) {
+            if (upcoming != null && dayOffset == 0) {
                 val totalSecs = Duration.between(clock, upcoming.at).seconds.coerceAtLeast(0)
                 val mins = totalSecs / 60
                 val heroShape = RoundedCornerShape(20.dp)
@@ -389,7 +437,7 @@ class MainActivity : ComponentActivity() {
             } else {
                 val listShape = RoundedCornerShape(20.dp)
                 val prayers = Prayer.values()
-                val kerWins = Kerahat.windows(this@MainActivity)
+                val kerWins = if (dayOffset == 0) Kerahat.windows(this@MainActivity) else emptyList()
                 val kerahatBand = accent.copy(alpha = 0.6f)
                 val rimTop = MaterialTheme.colorScheme.outlineVariant
                 val rowRects = remember { mutableStateMapOf<Int, Pair<Float, Float>>() }
