@@ -56,8 +56,11 @@ private fun optionViews(ctx: Context, layoutRes: Int): RemoteViews {
     val fg = Color.WHITE
     val dim = 0xB3FFFFFF.toInt()
     val accent = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
-    // Fixed 1:1 square; the background is letterboxed (centerInside), never stretched.
-    rv.setImageViewBitmap(R.id.opt_bg, PrayerWidget.background(ctx, OPTION_SIDE_DP, OPTION_SIDE_DP, opacity, true, accent, fixedDarkBlue = true))
+    // Fixed 1:1 square; inflate intrinsic density size so adjustViewBounds always fills min(cellW, cellH).
+    val bg = PrayerWidget.background(ctx, OPTION_SIDE_DP, OPTION_SIDE_DP, opacity, true, accent, fixedDarkBlue = true).apply {
+        density = maxOf(1, ctx.resources.displayMetrics.densityDpi / 4)
+    }
+    rv.setImageViewBitmap(R.id.opt_bg, bg)
 
     val now = LocalDateTime.now()
     val next = PrayerRepo.upcoming(ctx, now)
