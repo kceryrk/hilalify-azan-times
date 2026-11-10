@@ -95,6 +95,7 @@
     <string name="update_download">Download</string>
     <string name="update_failed">Download failed. Check your connection and try again.</string>
     <string name="update_later">Later</string>
+    <string name="release_notes">What\'s new</string>
 
     <string name="kofi">Support on Ko-fi</string>
     <string name="kofi_desc">If the app helps you, you can buy me a coffee.</string>

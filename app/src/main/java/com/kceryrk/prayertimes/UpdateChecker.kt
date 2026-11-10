@@ -11,10 +11,27 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /** A newer release found on GitHub. [apkUrl] is null when the release has no APK attached. */
-data class UpdateInfo(val version: String, val pageUrl: String, val apkUrl: String?)
+data class UpdateInfo(val version: String, val pageUrl: String, val apkUrl: String?, val notes: String)
 
 object UpdateChecker {
     private const val LATEST_URL = "https://api.github.com/repos/kceryrk/hilalify-azan-times/releases/latest"
+    private val sectionMarker = Regex("(?im)^##\\s*(English|T[üu]rk[çc]e|Turkish)\\s*$")
+
+    /**
+     * Picks the release notes for the device language. The release body holds an English section
+     * and a Turkish section, each introduced by a "## English" or "## Türkçe" heading.
+     * Without headings the whole body is returned.
+     */
+    fun notesFor(body: String, turkish: Boolean): String {
+        val markers = sectionMarker.findAll(body).toList()
+        if (markers.isEmpty()) return body.trim()
+        val wanted = markers.firstOrNull { m -> (m.groupValues[1].first() == 'T' || m.groupValues[1] == "Turkish") == turkish }
+            ?: markers.first()
+        val index = markers.indexOf(wanted)
+        val start = wanted.range.last + 1
+        val end = markers.getOrNull(index + 1)?.range?.first ?: body.length
+        return body.substring(start, end).trim()
+    }
 
     /** Returns the latest release if it is newer than the installed version, otherwise null. */
     suspend fun check(ctx: Context): UpdateInfo? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -36,7 +53,8 @@ object UpdateChecker {
                             .firstOrNull { it.getString("name").endsWith(".apk") }
                             ?.getString("browser_download_url")
                     }
-                    UpdateInfo(tag, json.getString("html_url"), apk)
+                    val turkish = java.util.Locale.getDefault().language == "tr"
+                    UpdateInfo(tag, json.getString("html_url"), apk, notesFor(json.optString("body"), turkish))
                 } else null
             } finally {
                 conn.disconnect()

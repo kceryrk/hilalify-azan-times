@@ -94,6 +94,7 @@
     <string name="update_download">İndir</string>
     <string name="update_failed">İndirme başarısız. Bağlantınızı kontrol edip tekrar deneyin.</string>
     <string name="update_later">Sonra</string>
+    <string name="release_notes">Yenilikler</string>
 
     <string name="kofi">Ko-fi\'de destek ol</string>
     <string name="kofi_desc">Uygulama işinize yaradıysa bana bir kahve ısmarlayabilirsiniz.</string>

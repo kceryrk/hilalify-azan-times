@@ -429,13 +429,6 @@ class MainActivity : ComponentActivity() {
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .drawBehind {
-                                    val bw = 4.dp.toPx()
-                                    val bx = size.width - 6.dp.toPx()
-                                    bands.forEach { (f1, f2) ->
-                                        drawRect(kerahatBand, topLeft = Offset(bx, size.height * f1), size = Size(bw, size.height * (f2 - f1)))
-                                    }
-                                }
                                 .background(if (isCurrent) accent.copy(alpha = 0.22f) else Color.Transparent)
                                 .then(
                                     if (timeLeft != null) Modifier.drawBehind {
@@ -450,6 +443,15 @@ class MainActivity : ComponentActivity() {
                                     } else Modifier
                                 )
                                 .padding(horizontal = 20.dp, vertical = 15.dp)
+                                .drawWithContent {
+                                    drawContent()
+                                    // Centered on the dotted track (track is at width - 2dp).
+                                    val bw = 3.dp.toPx()
+                                    val bx = size.width - 2.dp.toPx() - bw / 2
+                                    bands.forEach { (f1, f2) ->
+                                        drawRect(kerahatBand, topLeft = Offset(bx, size.height * f1), size = Size(bw, size.height * (f2 - f1)))
+                                    }
+                                }
                         ) {
 
                             Text(

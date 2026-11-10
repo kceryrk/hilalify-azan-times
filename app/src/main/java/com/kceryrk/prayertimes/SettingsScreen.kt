@@ -429,7 +429,15 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit) {
                         Text("${progress.coerceIn(0, 100)}%", style = MaterialTheme.typography.titleMedium)
                     }
                 }
-                else -> Text(stringResource(R.string.update_desc))
+                else -> Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(stringResource(R.string.update_desc))
+                    if (info.notes.isNotBlank()) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(stringResource(R.string.release_notes), style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.height(4.dp))
+                        Text(info.notes, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
         },
         confirmButton = {
