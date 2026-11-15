@@ -84,18 +84,8 @@
     <string name="widget_show_times">Show today\'s times</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_desc">Prayer times and adhan alarms. Free and open source.</string>
-    <string name="updates_on">Check for updates on launch</string>
     <string name="background_settings">Background permissions</string>
     <string name="background_settings_desc">Allow autostart and unrestricted battery so the notification keeps updating (Xiaomi, Huawei, etc.)</string>
-    <string name="update_check">Check for updates</string>
-    <string name="update_checking">Checking…</string>
-    <string name="update_none">You have the latest version.</string>
-    <string name="update_available">Update available: %1$s</string>
-    <string name="update_desc">A newer version of Hilal\'ify is available on GitHub.</string>
-    <string name="update_download">Download</string>
-    <string name="update_failed">Download failed. Check your connection and try again.</string>
-    <string name="update_later">Later</string>
-    <string name="release_notes">What\'s new</string>
 
     <string name="kofi">Support on Ko-fi</string>
     <string name="kofi_desc">If the app helps you, you can buy me a coffee.</string>
@@ -114,4 +104,8 @@
     <string name="in_minutes">%1$d min</string>
     <string name="widget_preview_next">Asr · in 1h 24m</string>
     <string name="widget_preview_countdown">in 1h 24m</string>
+    <string name="update_ready_title">Update ready</string>
+    <string name="update_ready_text">A new version of Hilal\'ify has been downloaded. Restart the app to install it.</string>
+    <string name="update_restart">Restart</string>
+    <string name="update_later">Later</string>
 </resources>

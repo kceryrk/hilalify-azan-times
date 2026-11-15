@@ -15,6 +15,7 @@
     <string name="next_prayer">%1$s</string>
     <string name="choose_city">Choose city</string>
     <string name="countdown_hm">%1$d sa %2$02d dk kaldı</string>
+    <string name="in_time">%1$dsa %2$02ddk sonra</string>
     <string name="in_time_short">%1$d dk kaldı</string>
     <string name="countdown_m">%1$d dk kaldı</string>
     <string name="countdown_ms">%1$d dk %2$02d sn kaldı</string>
@@ -83,18 +84,8 @@
     <string name="widget_show_times">Bugünkü vakitleri göster</string>
     <string name="about_version">Sürüm %1$s</string>
     <string name="about_desc">Namaz vakitleri ve ezan alarmları. Ücretsiz ve açık kaynak.</string>
-    <string name="updates_on">Açılışta güncellemeleri kontrol et</string>
     <string name="background_settings">Arka plan izinleri</string>
     <string name="background_settings_desc">Bildirimin arka planda güncellenmesi için otomatik başlatma ve pil kısıtlamasız mod açın (Xiaomi, Huawei vb.)</string>
-    <string name="update_check">Güncellemeleri kontrol et</string>
-    <string name="update_checking">Kontrol ediliyor…</string>
-    <string name="update_none">En son sürümü kullanıyorsunuz.</string>
-    <string name="update_available">Güncelleme var: %1$s</string>
-    <string name="update_desc">Hilal\'ify\'ın daha yeni bir sürümü GitHub\'da mevcut.</string>
-    <string name="update_download">İndir</string>
-    <string name="update_failed">İndirme başarısız. Bağlantınızı kontrol edip tekrar deneyin.</string>
-    <string name="update_later">Sonra</string>
-    <string name="release_notes">Yenilikler</string>
 
     <string name="kofi">Ko-fi\'de destek ol</string>
     <string name="kofi_desc">Uygulama işinize yaradıysa bana bir kahve ısmarlayabilirsiniz.</string>
@@ -113,4 +104,8 @@
     <string name="in_minutes">%1$d dk</string>
     <string name="widget_preview_next">İkindi · 1 sa 24 dk</string>
     <string name="widget_preview_countdown">1 sa 24 dk kaldı</string>
+    <string name="update_ready_title">Güncelleme hazır</string>
+    <string name="update_ready_text">Hilal\'ify\'ın yeni sürümü indirildi. Kurmak için uygulamayı yeniden başlatın.</string>
+    <string name="update_restart">Yeniden başlat</string>
+    <string name="update_later">Daha sonra</string>
 </resources>

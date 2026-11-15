@@ -12,14 +12,14 @@ val releaseKeystoreProps = Properties().apply {
 
 android {
     namespace = "com.kceryrk.prayertimes"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.kceryrk.prayertimes"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 16
-        versionName = "1.15"
+        targetSdk = 36
+        versionCode = 21
+        versionName = "1.16"
     }
 
     signingConfigs {
@@ -68,4 +68,6 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
+    implementation("androidx.fragment:fragment:1.8.5")
 }

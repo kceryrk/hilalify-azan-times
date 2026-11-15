@@ -10,6 +10,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateOptions
+import com.google.android.play.core.install.InstallStateUpdatedListener
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.InstallStatus
+import com.google.android.play.core.install.model.UpdateAvailability
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -28,6 +34,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -140,6 +149,33 @@ class MainActivity : ComponentActivity() {
 
     private val notifLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    private val appUpdateManager by lazy { AppUpdateManagerFactory.create(this) }
+    private val updateLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { }
+    private var updateDownloaded by mutableStateOf(false)
+    private val updateListener = InstallStateUpdatedListener { state ->
+        if (state.installStatus() == InstallStatus.DOWNLOADED) updateDownloaded = true
+    }
+
+    private fun checkForUpdate() {
+        appUpdateManager.registerListener(updateListener)
+        appUpdateManager.appUpdateInfo.addOnSuccessListener { info ->
+            if (info.installStatus() == InstallStatus.DOWNLOADED) {
+                updateDownloaded = true
+            } else if (info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE &&
+                info.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)
+            ) {
+                appUpdateManager.startUpdateFlowForResult(
+                    info, updateLauncher, AppUpdateOptions.newBuilder(AppUpdateType.FLEXIBLE).build()
+                )
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        appUpdateManager.unregisterListener(updateListener)
+        super.onDestroy()
+    }
+
     private var showCityDialog by mutableStateOf(false)
     private var refreshing by mutableStateOf(false)
     private var tick by mutableStateOf(0)
@@ -160,6 +196,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Alarms.createChannels(this)
         RefreshWorker.schedule(this)
+        checkForUpdate()
         setContent {
             val themePref = AppSettings.str(this, "theme", "system")
             val dark = when (themePref) {
@@ -178,15 +215,23 @@ class MainActivity : ComponentActivity() {
             )
             MaterialTheme(colorScheme = scheme) {
                 Surface(Modifier.fillMaxSize()) {
-                    var availableUpdate by remember { mutableStateOf<UpdateInfo?>(null) }
-                    LaunchedEffect(Unit) {
-                        if (AppSettings.updatesEnabled(this@MainActivity)) {
-                            availableUpdate = UpdateChecker.check(this@MainActivity)
-                        }
-                    }
-                    availableUpdate?.let { UpdateDialog(it) { availableUpdate = null } }
                     MainScreen()
                 }
+                if (updateDownloaded) AlertDialog(
+                    onDismissRequest = { updateDownloaded = false },
+                    title = { Text(stringResource(R.string.update_ready_title)) },
+                    text = { Text(stringResource(R.string.update_ready_text)) },
+                    confirmButton = {
+                        TextButton(onClick = { appUpdateManager.completeUpdate() }) {
+                            Text(stringResource(R.string.update_restart))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { updateDownloaded = false }) {
+                            Text(stringResource(R.string.update_later))
+                        }
+                    }
+                )
             }
         }
         if (PrayerRepo.prefs(this).getString("mode", null) == "city") {
@@ -275,15 +320,17 @@ class MainActivity : ComponentActivity() {
             ) { page ->
                 when (page) {
                     0 -> TimesPage(times, upcoming, clock)
-                    1 -> ToolsScreen()
-                    else -> SettingsScreen(
-                        onGpsToggle = { on ->
-                            PrayerRepo.setGpsMode(this@MainActivity, on)
-                            if (on) locate() else showCityDialog = true
-                        },
-                        onCity = { showCityDialog = true },
-                        onRecreate = { recreate() }
-                    )
+                    1 -> Box(Modifier.fillMaxSize().background(bgColor).windowInsetsPadding(WindowInsets.statusBars)) { ToolsScreen() }
+                    else -> Box(Modifier.fillMaxSize().background(bgColor).windowInsetsPadding(WindowInsets.statusBars)) {
+                        SettingsScreen(
+                            onGpsToggle = { on ->
+                                PrayerRepo.setGpsMode(this@MainActivity, on)
+                                if (on) locate() else showCityDialog = true
+                            },
+                            onCity = { showCityDialog = true },
+                            onRecreate = { recreate() }
+                        )
+                    }
                 }
             }
             GlassNav(pagerState, backdrop)
@@ -313,6 +360,7 @@ class MainActivity : ComponentActivity() {
                 .fillMaxSize()
                 .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.45f), MaterialTheme.colorScheme.background)))
                 .drawBehind { drawSky(sky) }
+                .windowInsetsPadding(WindowInsets.statusBars)
                 .verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 120.dp)
         ) {
