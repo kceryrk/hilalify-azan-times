@@ -21,8 +21,12 @@ object Kerahat {
     /** Today's kerahat windows, empty when the setting is off or times are unavailable. */
     fun windows(ctx: Context): List<Pair<LocalDateTime, LocalDateTime>> {
         if (!AppSettings.bool(ctx, "kerahat", true)) return emptyList()
-        val t = PrayerRepo.today(ctx) ?: return emptyList()
-        val day = LocalDate.now()
+        return windowsForDate(ctx, LocalDate.now())
+    }
+
+    /** Kerahat windows for [day] regardless of the display toggle, used for scheduling alerts. */
+    fun windowsForDate(ctx: Context, day: LocalDate): List<Pair<LocalDateTime, LocalDateTime>> {
+        val t = PrayerRepo.day(ctx, day) ?: return emptyList()
         val sunrise = t[Prayer.SUNRISE] ?: return emptyList()
         val dhuhr = t[Prayer.DHUHR] ?: return emptyList()
         val maghrib = t[Prayer.MAGHRIB] ?: return emptyList()

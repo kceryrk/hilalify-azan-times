@@ -19,3 +19,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "PrayerTimes"
 include(":app")
+include(":wear")

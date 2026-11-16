@@ -1,0 +1,2 @@
+com.kceryrk.prayertimes
+string app_name

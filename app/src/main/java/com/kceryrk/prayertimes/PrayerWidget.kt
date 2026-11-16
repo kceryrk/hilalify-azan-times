@@ -37,6 +37,7 @@ class PrayerWidget : AppWidgetProvider() {
             val ids = mgr.getAppWidgetIds(ComponentName(ctx, PrayerWidget::class.java))
             ids.forEach { mgr.updateAppWidget(it, views(ctx, mgr.getAppWidgetOptions(it))) }
             refreshOptionWidgets(ctx)
+            refreshDhikrWidgets(ctx)
         }
 
         private fun Int.dp(ctx: Context): Int = (this * ctx.resources.displayMetrics.density).toInt()

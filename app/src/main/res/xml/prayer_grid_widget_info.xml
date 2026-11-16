@@ -8,8 +8,8 @@
     android:minResizeHeight="110dp"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_opt_grid"
-    android:resizeMode="none"
+    android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:previewLayout="@layout/widget_opt_grid_preview"
-    android:previewImage="@drawable/widget_preview_bg"
+    android:previewImage="@drawable/widget_preview_grid"
     android:description="@string/widget_grid_desc" />

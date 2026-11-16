@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "LINKED_RESOURCES_BINARY_FORMAT",
+    "kind": "Directory"
+  },
+  "applicationId": "com.kceryrk.prayertimes",
+  "variantName": "debug",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 24,
+      "versionName": "1.18",
+      "outputFile": "linked-resources-binary-format-debug.ap_"
+    }
+  ],
+  "elementType": "File"
+}

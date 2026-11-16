@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
@@ -135,6 +136,11 @@ fun GlassAlertDialog(
 }
 
 @Composable
+private fun DialogSeparator() {
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+}
+
+@Composable
 private fun GlassDialogCard(
     onDismiss: () -> Unit,
     backdrop: GraphicsLayer?,
@@ -211,9 +217,13 @@ private fun GlassDialogCard(
             )
             Column(Modifier.padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 12.dp)) {
                 ProvideTextStyle(MaterialTheme.typography.headlineSmall) { title() }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
+                DialogSeparator()
+                Spacer(Modifier.height(12.dp))
                 ProvideTextStyle(MaterialTheme.typography.bodyMedium) { text() }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(12.dp))
+                DialogSeparator()
+                Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     dismissButton?.invoke()
                     if (dismissButton != null) Spacer(Modifier.width(8.dp))

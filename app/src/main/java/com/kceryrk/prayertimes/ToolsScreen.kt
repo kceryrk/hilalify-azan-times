@@ -39,8 +39,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,12 +60,14 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.DateFormat
@@ -86,13 +90,21 @@ fun ToolsScreen() {
     ) {
         Spacer(Modifier.height(20.dp))
         PillSegmented(
-            options = listOf(stringResource(R.string.tools_compass), stringResource(R.string.tools_zikir)),
+            options = listOf(
+                stringResource(R.string.tools_compass),
+                stringResource(R.string.tools_zikir),
+                stringResource(R.string.tools_qada)
+            ),
             selected = tool,
             onSelect = { select(it) }
         )
         Spacer(Modifier.height(12.dp))
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            if (tool == 0) QiblaScreen() else ZikirScreen()
+            when (tool) {
+                0 -> QiblaScreen()
+                1 -> ZikirScreen()
+                else -> QadaScreen()
+            }
         }
     }
 }
@@ -111,6 +123,11 @@ fun ZikirScreen() {
         prefs.edit().putInt("count", count).putInt("target", target).apply()
     }
 
+    fun saveAndRefresh() {
+        persist()
+        refreshDhikrWidgets(ctx)
+    }
+
     // Kaydet snapshots the current count to history; the counter keeps going.
     fun archive() {
         if (count > 0) {
@@ -118,6 +135,26 @@ fun ZikirScreen() {
             saveHistory(prefs, history)
         }
     }
+    // The widget can change the count while the app is closed, so reload on resume and save on leave.
+    val owner = LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    count = prefs.getInt("count", 0)
+                    target = prefs.getInt("target", 33)
+                }
+                Lifecycle.Event.ON_PAUSE -> saveAndRefresh()
+                else -> Unit
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose {
+            owner.lifecycle.removeObserver(observer)
+            saveAndRefresh()
+        }
+    }
+
     val sideControls = @Composable {
         Column(
             Modifier.fillMaxHeight(),
@@ -346,6 +383,79 @@ private fun HandSwitch(leftHand: Boolean, onClick: () -> Unit) {
     }
 }
 
+/** Missed-prayer (qada) counters for the five adhan prayers, stored per prayer. */
+@Composable
+private fun QadaScreen() {
+    val ctx = LocalContext.current
+    val prefs = remember { ctx.getSharedPreferences("qada", android.content.Context.MODE_PRIVATE) }
+    val prayers = remember { Prayer.values().filter { it.notify } }
+    val counts = remember {
+        mutableStateMapOf<String, Int>().apply { prayers.forEach { put(it.name, prefs.getInt(it.name, 0)) } }
+    }
+    fun set(p: Prayer, value: Int) {
+        val v = value.coerceAtLeast(0)
+        counts[p.name] = v
+        prefs.edit().putInt(p.name, v).apply()
+    }
+    Column(
+        Modifier.fillMaxSize().padding(top = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            stringResource(R.string.qada_desc),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(16.dp))
+        prayers.forEach { p ->
+            val count = counts[p.name] ?: 0
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(p.labelRes), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                MinusButton { set(p, count - 1) }
+                Text(
+                    count.toString(),
+                    Modifier.width(64.dp),
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center
+                )
+                PlusButton { set(p, count + 1) }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            stringResource(R.string.qada_total, counts.values.sum()),
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(onClick = { prayers.forEach { set(it, 0) } }) {
+            Text(stringResource(R.string.qada_reset))
+        }
+    }
+}
+
+/** Round plus button, matching [MinusButton]. */
+@Composable
+private fun PlusButton(onClick: () -> Unit) {
+    val iconColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color.White else Color.Black
+    Box(
+        Modifier
+            .size(48.dp)
+            .glassPill()
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(Modifier.size(20.dp)) {
+            val stroke = 3.dp.toPx()
+            drawLine(iconColor, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), strokeWidth = stroke, cap = StrokeCap.Round)
+            drawLine(iconColor, Offset(size.width / 2, 0f), Offset(size.width / 2, size.height), strokeWidth = stroke, cap = StrokeCap.Round)
+        }
+    }
+}
+
 /** Round minus button; white on dark backgrounds, black on light ones. */
 @Composable
 private fun MinusButton(onClick: () -> Unit) {
@@ -373,16 +483,14 @@ private fun MinusButton(onClick: () -> Unit) {
 @Composable
 private fun TapButton(count: Int, target: Int, modifier: Modifier, onTap: () -> Unit) {
     val accent = MaterialTheme.colorScheme.primary
-    val haptic = LocalHapticFeedback.current
+    val ctx = LocalContext.current
     Box(
         modifier
             .shadow(16.dp, CircleShape, spotColor = accent, ambientColor = accent)
             .clip(CircleShape)
             .background(Brush.verticalGradient(listOf(lerp(accent, Color.White, 0.25f), accent)))
             .clickable {
-                haptic.performHapticFeedback(
-                    if (count + 1 == target) HapticFeedbackType.LongPress else HapticFeedbackType.TextHandleMove
-                )
+                playDhikrHaptic(ctx, complete = count + 1 == target)
                 onTap()
             },
         contentAlignment = Alignment.Center

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Hilal\'ify : Azan Times</string>
     <string name="prayer_fajr">Fajr</string>
     <string name="prayer_sunrise">Sunrise</string>
@@ -55,9 +55,9 @@
     <string name="sec_permissions">Permissions</string>
     <string name="sec_about">About</string>
     <string name="language">Language</string>
-    <string name="lang_system">System</string>
-    <string name="lang_en">English</string>
-    <string name="lang_tr">Türkçe</string>
+    <string name="lang_system" tools:ignore="MissingTranslation">System</string>
+    <string name="lang_en" tools:ignore="MissingTranslation">English</string>
+    <string name="lang_tr" tools:ignore="MissingTranslation">Türkçe</string>
     <string name="theme">Theme</string>
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
@@ -75,23 +75,93 @@
     <string name="alarm_for">Adhan for %1$s</string>
     <string name="notif_on">Show permanent notification</string>
     <string name="notif_times">Show today\'s times</string>
+    <string name="real_moon_icon">Moon icon follows real moon phase</string>
+    <string name="legacy_notif">Legacy notification</string>
+    <string name="island_live">Live countdown on Dynamic Island</string>
+    <string name="island_adhan">Prayer time alert on Dynamic Island</string>
+    <string name="notif_hide_lockscreen">Hide countdown on lock screen &amp; AOD</string>
+    <string name="adhan_hide_lockscreen">Hide prayer alert on lock screen &amp; AOD</string>
+    <string name="island_vakit">Dynamic Island prayer</string>
+    <string name="island_vakit_next">Next prayer</string>
+    <string name="island_vakit_current">Current prayer</string>
     <string name="kerahat_setting">Kerahat vakti (makruh times)</string>
     <string name="kerahat_active">Kerahat vakti</string>
     <string name="kerahat_minutes">Kerahat duration</string>
+    <string name="kerahat_alarm">Kerahat approaching alarm</string>
+    <string name="kerahat_alarm_min">Alert before kerahat</string>
+    <string name="kerahat_alarm_title">Kerahat approaching</string>
+    <string name="kerahat_alarm_text">Kerahat time starts in %1$d min</string>
+    <string name="notif_sound">Notification sound</string>
+    <string name="sound_default">Default</string>
+    <string name="sound_silent">Silent</string>
+    <string name="sound_custom">Custom sound</string>
+    <string name="widget_fill_square">Fill 2×2 widget area</string>
+    <string name="group_prayer_alarms">Prayer time alarms</string>
+    <string name="group_notif_settings">Permanent notification</string>
+    <string name="group_island_settings">Dynamic Island</string>
+    <string name="group_kerahat_settings">Kerahat settings</string>
+    <string name="group_widget_settings">Widget appearance &amp; layout</string>
+    <string name="group_permissions">Permissions &amp; background</string>
+    <string name="group_silence_settings">Silence settings</string>
     <string name="min_short">min</string>
     <string name="widget_opacity">Background opacity</string>
     <string name="widget_show_next">Show next prayer</string>
     <string name="widget_show_times">Show today\'s times</string>
     <string name="about_version">Version %1$s</string>
-    <string name="about_desc">Prayer times and adhan alarms. Free and open source.</string>
+    <string name="about_desc">Completely free, open source, and 100% ad-free — no tracking, no subscriptions.</string>
     <string name="background_settings">Background permissions</string>
     <string name="background_settings_desc">Allow autostart and unrestricted battery so the notification keeps updating (Xiaomi, Huawei, etc.)</string>
 
     <string name="kofi">Support on Ko-fi</string>
-    <string name="kofi_desc">If the app helps you, you can buy me a coffee.</string>
+    <string name="kofi_desc">I build and maintain this app in my spare time. If it helps your daily prayers and you\'d like to support its development, any contribution means a lot and keeps updates coming!</string>
     <string name="tab_tools">Tools</string>
     <string name="tools_compass">Compass</string>
     <string name="tools_zikir">Zikirmatik</string>
+    <string name="tools_qada">Qada</string>
+    <string name="qada_desc">Count missed prayers and make them up over time.</string>
+    <string name="qada_total">Total missed: %1$d</string>
+    <string name="qada_reset">Reset all</string>
+    <string name="sec_silence">Silence at prayer time</string>
+    <string name="silence_on">Silence phone at adhan time</string>
+    <string name="silence_desc">Turns on Do Not Disturb at adhan time. Needs notification access.</string>
+    <string name="silence_prayers">Prayers to silence</string>
+    <string name="silence_pick_title">Silence for</string>
+    <string name="silence_cuma">Cuma (Friday prayer)</string>
+    <string name="silence_cuma_desc">On Fridays, Dhuhr follows this switch instead of the Dhuhr checkbox.</string>
+    <string name="done">Done</string>
+    <string name="perm_notif_policy">Do Not Disturb access</string>
+    <string name="perm_exact">Exact alarms</string>
+    <string name="perm_notif">Notifications</string>
+    <string name="perm_granted">Granted</string>
+    <string name="perm_missing">Not granted. Tap to allow.</string>
+    <string name="ramadan_mode">Ramadan mode</string>
+    <string name="ramadan_desc">Sahur reminder 10 minutes before Fajr during Ramadan.</string>
+    <string name="travel_mode">Travel mode</string>
+    <string name="travel_desc">Gets your location with GPS on every open, even when a city is selected.</string>
+    <string name="channel_sahur">Sahur reminder</string>
+    <string name="sahur_title">Sahur time</string>
+    <string name="sahur_text">Fajr is in about 10 minutes.</string>
+    <string name="channel_reminder">Reminders</string>
+    <string name="jumuah_title">Jumu\'ah reminder</string>
+    <string name="jumuah_text">Jumu\'ah prayer is in %1$d minutes.</string>
+    <string name="qada_title">Qada reminder</string>
+    <string name="qada_text">You have %1$d missed prayers to make up.</string>
+    <string name="sec_reminders">Reminders</string>
+    <string name="jumuah_reminder">Jumu\'ah reminder</string>
+    <string name="jumuah_desc">Reminds you 30 minutes before Jumu\'ah prayer.</string>
+    <string name="iqama_at">Iqama %s</string>
+    <string name="shortcut_next_label">%1$s · %2$s</string>
+    <string name="sec_integrations">Integrations</string>
+    <string name="iqama_delay_title">Iqama delay</string>
+    <string name="iqama_delay_desc">Shows the iqama time in the adhan notification, this many minutes after the adhan. 0 turns it off.</string>
+    <string name="iqama_delay_value">%d min</string>
+    <string name="smart_home_title">Smart home webhook</string>
+    <string name="smart_home_desc">POSTs JSON (prayer, time, iqama) to this URL at each adhan. Works with Home Assistant, IFTTT, Node-RED and similar tools.</string>
+    <string name="smart_home_hint">https://your-server/webhook</string>
+    <string name="qada_reminder">Qada reminder</string>
+    <string name="qada_desc_setting">A daily reminder at the chosen time, only if you have missed prayers.</string>
+    <string name="qada_reminder_time">Reminder time: %1$s</string>
+    <string name="silence_minutes">Silent for</string>
     <string name="zikir_reset">Reset</string>
     <string name="zikir_save">Save</string>
     <string name="zikir_history">History</string>
@@ -108,4 +178,65 @@
     <string name="update_ready_text">A new version of Hilal\'ify has been downloaded. Restart the app to install it.</string>
     <string name="update_restart">Restart</string>
     <string name="update_later">Later</string>
+    <string name="channel_updates">App updates</string>
+    <string name="update_notif_title">Hilal\'ify update available</string>
+    <string name="update_notif_text">A new version is on Google Play. Tap to update.</string>
+    <string name="update_notif_action">Update</string>
+    <string name="share_card_chooser">Share prayer times</string>
+    <string name="widget_dhikr_label">Dhikr counter</string>
+    <string name="widget_dhikr_desc">Tap to count dhikr. Tap the widget to add one.</string>
+    <string name="dhikr_count_format">%1$d / %2$d</string>
+    <string name="widget_dhikr_done">Completed ✓</string>
+    <string name="lang_ar" translatable="false">العربية</string>
+    <string name="lang_ur" translatable="false">اردو</string>
+    <string name="lang_fa" translatable="false">فارسی</string>
+    <string name="lang_ps" translatable="false">پښتو</string>
+    <string name="lang_bn" translatable="false">বাংলা</string>
+    <string name="lang_hi" translatable="false">हिन्दी</string>
+    <string name="lang_ta" translatable="false">தமிழ்</string>
+    <string name="lang_in" translatable="false">Bahasa Indonesia</string>
+    <string name="lang_ms" translatable="false">Bahasa Melayu</string>
+    <string name="lang_fil" translatable="false">Filipino</string>
+    <string name="lang_fr" translatable="false">Français</string>
+    <string name="lang_de" translatable="false">Deutsch</string>
+    <string name="lang_es" translatable="false">Español</string>
+    <string name="lang_pt" translatable="false">Português</string>
+    <string name="lang_it" translatable="false">Italiano</string>
+    <string name="lang_nl" translatable="false">Nederlands</string>
+    <string name="lang_pl" translatable="false">Polski</string>
+    <string name="lang_ru" translatable="false">Русский</string>
+    <string name="lang_uk" translatable="false">Українська</string>
+    <string name="lang_ro" translatable="false">Română</string>
+    <string name="lang_sq" translatable="false">Shqip</string>
+    <string name="lang_bs" translatable="false">Bosanski</string>
+    <string name="lang_az" translatable="false">Azərbaycanca</string>
+    <string name="lang_kk" translatable="false">Қазақша</string>
+    <string name="lang_uz" translatable="false">O‘zbekcha</string>
+    <string name="lang_ky" translatable="false">Кыргызча</string>
+    <string name="lang_tk" translatable="false">Türkmençe</string>
+    <string name="lang_tg" translatable="false">Тоҷикӣ</string>
+    <string name="lang_ha" translatable="false">Hausa</string>
+    <string name="lang_sw" translatable="false">Kiswahili</string>
+    <string name="lang_so" translatable="false">Soomaali</string>
+    <string name="lang_zh" translatable="false">简体中文</string>
+    <string name="lang_ja" translatable="false">日本語</string>
+    <string name="lang_ko" translatable="false">한국어</string>
+    <string name="welcome_title">Peace &amp; Punctuality</string>
+    <string name="welcome_subtitle">Accurate prayer times, live countdowns, and a calm daily companion designed without ads.</string>
+    <string name="welcome_feat1_title">Live Countdowns &amp; Widgets</string>
+    <string name="welcome_feat1_desc">Always know how much time remains on your home screen and Dynamic Island.</string>
+    <string name="welcome_feat2_title">Smart Alarms &amp; Kerahat</string>
+    <string name="welcome_feat2_desc">Adhan alerts, custom sounds, auto-silence during prayer, and kerahat reminders.</string>
+    <string name="welcome_feat3_title">Qibla, Qada &amp; Zikir</string>
+    <string name="welcome_feat3_desc">Built-in Qibla compass, missed-prayer tracker, and tactile dhikr counter.</string>
+    <string name="get_started">Get Started</string>
+    <string name="setup_title">Quick Setup</string>
+    <string name="setup_subtitle">Tailor your prayer source, location, and permissions in seconds.</string>
+    <string name="setup_location_title">Location</string>
+    <string name="setup_source_title">Calculation Source</string>
+    <string name="setup_perms_title">Permissions</string>
+    <string name="setup_prefs_title">Quick Preferences</string>
+    <string name="setup_grant_gps">Grant Location Permission &amp; Detect</string>
+    <string name="setup_detecting">Detecting location…</string>
+    <string name="setup_finish">Finish Setup</string>
 </resources>

@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.appupdate.AppUpdateOptions
@@ -19,6 +20,7 @@ import com.google.android.play.core.install.model.UpdateAvailability
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.border
@@ -35,6 +37,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,9 +59,11 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -180,10 +185,16 @@ class MainActivity : ComponentActivity() {
     private var refreshing by mutableStateOf(false)
     private var tick by mutableStateOf(0)
     private var homeRequestTick by mutableStateOf(0)
+    private var onboardingDone by mutableStateOf(false)
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.getBooleanExtra("open_home", false)) {
+        handleOpenIntent(intent)
+    }
+
+    private fun handleOpenIntent(intent: Intent?) {
+        if (intent == null) return
+        if (intent.getBooleanExtra("open_home", false) || intent.data?.scheme == "hilalify") {
             homeRequestTick++
         }
     }
@@ -194,8 +205,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        handleOpenIntent(intent)
+        onboardingDone = AppSettings.bool(this, "onboarding_done", false)
         Alarms.createChannels(this)
         RefreshWorker.schedule(this)
+        UpdateCheckWorker.schedule(this)
+        UpdateCheckWorker.checkNow(this)
         checkForUpdate()
         setContent {
             val themePref = AppSettings.str(this, "theme", "system")
@@ -204,7 +220,8 @@ class MainActivity : ComponentActivity() {
                 "light" -> false
                 else -> isSystemInDarkTheme()
             }
-            val accent = Color(AppSettings.int(this, "accent", DEFAULT_ACCENT_ARGB))
+            var accentArgb by remember { mutableStateOf(AppSettings.int(this, "accent", DEFAULT_ACCENT_ARGB)) }
+            val accent = Color(accentArgb)
             val baseScheme = if (dark) darkColorScheme() else lightColorScheme()
             val scheme: ColorScheme = baseScheme.copy(
                 primary = accent,
@@ -215,7 +232,28 @@ class MainActivity : ComponentActivity() {
             )
             MaterialTheme(colorScheme = scheme) {
                 Surface(Modifier.fillMaxSize()) {
-                    MainScreen()
+                    if (!onboardingDone) {
+                        OnboardingScreen(
+                            accent = accent,
+                            localityLookup = { lat, lon -> localityOf(lat, lon) },
+                            onAccentChanged = {
+                                accentArgb = AppSettings.int(this@MainActivity, "accent", DEFAULT_ACCENT_ARGB)
+                            },
+                            onFinish = {
+                                onboardingDone = true
+                                val mode = PrayerRepo.prefs(this@MainActivity).getString("mode", null)
+                                if ((mode == "city" && !AppSettings.bool(this@MainActivity, "travel_mode", false)) ||
+                                    PrayerRepo.savedGps(this@MainActivity) != null
+                                ) {
+                                    refresh()
+                                } else {
+                                    locate()
+                                }
+                            }
+                        )
+                    } else {
+                        MainScreen()
+                    }
                 }
                 if (updateDownloaded) AlertDialog(
                     onDismissRequest = { updateDownloaded = false },
@@ -234,10 +272,12 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-        if (PrayerRepo.prefs(this).getString("mode", null) == "city") {
-            refresh()
-        } else {
-            locate()
+        if (onboardingDone) {
+            if (PrayerRepo.prefs(this).getString("mode", null) == "city" && !AppSettings.bool(this, "travel_mode", false)) {
+                refresh()
+            } else {
+                locate()
+            }
         }
     }
 
@@ -602,6 +642,20 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            if (times != null) {
+                Spacer(Modifier.height(12.dp))
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.Share,
+                        contentDescription = stringResource(R.string.share_card_chooser),
+                        tint = accent,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clickable { sharePrayerCard(this@MainActivity, viewDate, times, accent.toArgb()) }
+                    )
+                }
+            }
+
             if (refreshing) {
                 Spacer(Modifier.height(12.dp))
                 Text(stringResource(R.string.updating), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -637,7 +691,14 @@ class MainActivity : ComponentActivity() {
         val barScale by animateFloatAsState(if (holding) 1.08f else 1f, label = "navScale")
         val position = if (dragFraction >= 0f) dragFraction
         else pagerState.currentPage + pagerState.currentPageOffsetFraction
-        val slotWidth: Dp = 84.dp
+        val lensTarget = if (holding || abs(position - position.roundToInt()) > 0.001f) 1f else 0f
+        // Distortion switches on almost instantly and fades out slowly when returning to rest.
+        val lensAmount by animateFloatAsState(
+            lensTarget,
+            animationSpec = if (lensTarget == 1f) tween(60) else tween(700),
+            label = "navLens"
+        )
+        val slotWidth: Dp = 76.dp
         val slotHeight: Dp = 60.dp
         val inset = 6.dp
         val slotPx = with(density) { slotWidth.toPx() }
@@ -648,7 +709,8 @@ class MainActivity : ComponentActivity() {
         Box(
             Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 24.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(bottom = 16.dp)
                 .graphicsLayer { scaleX = barScale; scaleY = barScale }
                 .onSizeChanged { barSize = it }
                 .onGloballyPositioned { barPos = it.positionInRoot() }
@@ -718,12 +780,12 @@ class MainActivity : ComponentActivity() {
                         .graphicsLayer {
                             // Offscreen so the SrcAtop mask below recolors only the icon pixels.
                             compositingStrategy = CompositingStrategy.Offscreen
+                            // Icons bend only around the selector's inside edge; strength eases to 0 at rest.
                             if (Build.VERSION.SDK_INT >= 33 && slotPx > 0f) {
-                                // Icons bend only around the selector's inside edge.
                                 renderEffect = lens?.effectFor(
                                     position * slotPx + slotPx / 2f, slotHeightPx / 2f,
                                     slotPx / 2f, slotHeightPx / 2f,
-                                    slotHeightPx / 2f, with(density) { 14.dp.toPx() }, with(density) { 10.dp.toPx() }
+                                    slotHeightPx / 2f, with(density) { 14.dp.toPx() }, with(density) { 10.dp.toPx() } * lensAmount
                                 )
                             }
                         }
@@ -854,7 +916,7 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private fun localityOf(lat: Double, lon: Double): Pair<String?, String> = try {
+    internal fun localityOf(lat: Double, lon: Double): Pair<String?, String> = try {
         val addr = Geocoder(this, Locale.getDefault()).getFromLocation(lat, lon, 1)?.firstOrNull()
         (addr?.locality ?: addr?.subAdminArea ?: addr?.adminArea) to (addr?.countryCode ?: "")
     } catch (_: Exception) {

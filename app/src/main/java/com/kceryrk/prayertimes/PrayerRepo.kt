@@ -96,9 +96,29 @@ object PrayerRepo {
             CityHit(city, "", 0.0, 0.0, cc).label(locale)
         } else cityHit(ctx)?.label(AppSettings.localized(ctx).resources.configuration.locales[0])
 
-    /** Autocomplete search through Open-Meteo's free geocoding API. */
+    /**
+     * Searches Open-Meteo (prefix match in the device language) and Photon (typo-tolerant OSM names in any
+     * language, e.g. "bruksel" or "bruxelles" find Brussels). Results are merged and de-duplicated by place.
+     */
     fun searchCities(query: String, lang: String): List<CityHit> {
-        val url = "https://geocoding-api.open-meteo.com/v1/search?name=${enc(query)}&count=8&language=$lang&format=json"
+        val q = query.trim().replace(Regex("\\s+"), " ")
+        if (q.isEmpty()) return emptyList()
+        val merged = openMeteoSearch(q, lang).toMutableList()
+        photonSearch(q, if (lang in PHOTON_LANGS) lang else "en").forEach { hit ->
+            if (merged.none { samePlace(it, hit) }) merged += hit
+        }
+        return merged.take(10)
+    }
+
+    private val PHOTON_LANGS = setOf("en", "de", "fr", "it")
+
+    private fun samePlace(a: CityHit, b: CityHit): Boolean =
+        a.name.equals(b.name, ignoreCase = true) &&
+            (a.countryCode.equals(b.countryCode, ignoreCase = true) || a.country.equals(b.country, ignoreCase = true) ||
+                (kotlin.math.abs(a.lat - b.lat) < 0.05 && kotlin.math.abs(a.lon - b.lon) < 0.05))
+
+    private fun openMeteoSearch(q: String, lang: String): List<CityHit> {
+        val url = "https://geocoding-api.open-meteo.com/v1/search?name=${enc(q)}&count=8&language=$lang&format=json"
         val body = download(url) ?: return emptyList()
         val results = JSONObject(body).optJSONArray("results") ?: return emptyList()
         return (0 until results.length()).map { i ->
@@ -108,6 +128,20 @@ object PrayerRepo {
                 r.getDouble("latitude"), r.getDouble("longitude"),
                 r.optString("country_code")
             )
+        }
+    }
+
+    private fun photonSearch(q: String, lang: String): List<CityHit> {
+        val url = "https://photon.komoot.io/api/?q=${enc(q)}&limit=8&lang=$lang" +
+            "&osm_tag=place:city&osm_tag=place:town&osm_tag=place:village"
+        val body = download(url) ?: return emptyList()
+        val features = JSONObject(body).optJSONArray("features") ?: return emptyList()
+        return (0 until features.length()).mapNotNull { i ->
+            val f = features.getJSONObject(i)
+            val p = f.getJSONObject("properties")
+            val name = p.optString("name").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val coords = f.getJSONObject("geometry").getJSONArray("coordinates")
+            CityHit(name, p.optString("country"), coords.getDouble(1), coords.getDouble(0), p.optString("countrycode"))
         }
     }
 
@@ -162,19 +196,25 @@ object PrayerRepo {
         null
     }
 
-    /** Downloads this month and next month. Keeps the old cache when the network fails. */
+    /** Downloads this month immediately and warms next month + Diyanet Hijri in the background. */
     fun refresh(ctx: Context): Boolean {
         val src = source(ctx) ?: return false
         val now = YearMonth.now()
         val method = AppSettings.method(ctx)
-        var ok = true
-        val edit = prefs(ctx).edit()
-        for (ym in listOf(now, now.plusMonths(1))) {
-            val body = download(url(src, ym, method))
-            if (body != null) edit.putString(cacheKey(ctx, src, ym), body) else ok = false
-        }
-        edit.putBoolean(KEY_OK, ok).apply()
-        if (method == 13) DiyanetHijri.refresh(ctx)
+        val body = download(url(src, now, method))
+        val ok = body != null
+        prefs(ctx).edit().apply {
+            if (body != null) putString(cacheKey(ctx, src, now), body)
+            putBoolean(KEY_OK, ok)
+        }.apply()
+        val appCtx = ctx.applicationContext
+        Thread {
+            val nextYm = now.plusMonths(1)
+            download(url(src, nextYm, method))?.let { nextBody ->
+                prefs(appCtx).edit().putString(cacheKey(appCtx, src, nextYm), nextBody).apply()
+            }
+            if (method == 13) DiyanetHijri.refresh(appCtx)
+        }.start()
         return ok
     }
 

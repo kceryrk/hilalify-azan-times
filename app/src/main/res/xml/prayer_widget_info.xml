@@ -9,7 +9,7 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_prayer"
     android:previewLayout="@layout/widget_prayer_preview"
-    android:previewImage="@drawable/widget_preview_bg"
+    android:previewImage="@drawable/widget_preview_prayer"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/widget_description" />

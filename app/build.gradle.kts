@@ -18,8 +18,8 @@ android {
         applicationId = "com.kceryrk.prayertimes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 22
-        versionName = "1.16"
+        versionCode = 28
+        versionName = "1.22"
     }
 
     signingConfigs {
@@ -35,9 +35,27 @@ android {
 
     buildTypes {
         release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             if (releaseKeystoreProps.isNotEmpty()) {
                 signingConfig = signingConfigs.getByName("release")
             }
+        }
+    }
+
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
+    // Keep all languages in the AAB so the in-app language choice works even when the system language differs.
+    bundle {
+        language {
+            enableSplit = false
         }
     }
 
@@ -70,4 +88,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("com.google.android.play:app-update-ktx:2.1.0")
     implementation("androidx.fragment:fragment:1.8.5")
+    implementation("com.google.android.gms:play-services-wearable:20.0.1")
 }

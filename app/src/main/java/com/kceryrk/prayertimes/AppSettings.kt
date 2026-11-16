@@ -25,7 +25,10 @@ object AppSettings {
         e.apply()
     }
 
-    fun method(ctx: Context): Int = int(ctx, "method", 13)
+    fun defaultMethod(): Int =
+        if (android.content.res.Resources.getSystem().configuration.locales[0].language == "tr") 13 else 3
+
+    fun method(ctx: Context): Int = int(ctx, "method", defaultMethod())
     fun refreshDays(ctx: Context): Int = int(ctx, "refresh_days", 10).coerceIn(1, 10)
     fun alarmOn(ctx: Context, p: Prayer): Boolean = bool(ctx, "alarm_${p.name}")
 

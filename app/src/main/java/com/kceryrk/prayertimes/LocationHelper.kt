@@ -12,32 +12,41 @@ import androidx.core.location.LocationManagerCompat
 import java.util.concurrent.atomic.AtomicBoolean
 
 object LocationHelper {
-    private const val TIMEOUT_MS = 15_000L
+    private const val TIMEOUT_MS = 3_500L
 
     /**
-     * Requests a fresh fix from the first enabled provider, falling back to the last known location.
-     * Calls back with null when no location is available. Caller must hold a location permission.
+     * Returns a recent cached fix immediately when available, or races enabled providers (preferring fast
+     * network/Wi-Fi fixes indoors) with a short timeout so startup never stalls.
      */
     @SuppressLint("MissingPermission")
     fun current(ctx: Context, onResult: (Location?) -> Unit) {
         val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val cached = lastKnown(lm)
+        if (cached != null && System.currentTimeMillis() - cached.time <= 30 * 60_000L) {
+            onResult(cached)
+            return
+        }
         val main = Handler(Looper.getMainLooper())
-        // Guarantees exactly one callback, even if the system never answers.
         val done = AtomicBoolean(false)
+        val signals = mutableListOf<CancellationSignal>()
         fun finish(loc: Location?) {
             if (done.compareAndSet(false, true)) {
                 main.removeCallbacksAndMessages(null)
-                onResult(loc ?: lastKnown(lm))
+                signals.forEach { runCatching { it.cancel() } }
+                onResult(loc ?: cached)
             }
         }
-        val provider = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-            .firstOrNull { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
-        if (provider == null) return finish(null)
+        val providers = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
+            .filter { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
+        if (providers.isEmpty()) return finish(null)
 
-        val signal = CancellationSignal()
-        main.postDelayed({ signal.cancel(); finish(null) }, TIMEOUT_MS)
-        LocationManagerCompat.getCurrentLocation(lm, provider, signal, ContextCompat.getMainExecutor(ctx)) { loc ->
-            finish(loc)
+        main.postDelayed({ finish(null) }, TIMEOUT_MS)
+        for (p in providers) {
+            val sig = CancellationSignal()
+            signals.add(sig)
+            LocationManagerCompat.getCurrentLocation(lm, p, sig, ContextCompat.getMainExecutor(ctx)) { loc ->
+                if (loc != null) finish(loc)
+            }
         }
     }
 

@@ -17,11 +17,11 @@ import java.time.LocalDateTime
 /** Shared 2x2 widget variants: list, grid and ring. Each provider only supplies its layout. */
 abstract class OptionWidget(private val layoutRes: Int) : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        ids.forEach { id -> manager.updateAppWidget(id, optionViews(context, layoutRes)) }
+        ids.forEach { id -> manager.updateAppWidget(id, optionViews(context, layoutRes, manager.getAppWidgetOptions(id))) }
     }
 
     override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, newOptions: Bundle) {
-        manager.updateAppWidget(id, optionViews(context, layoutRes))
+        manager.updateAppWidget(id, optionViews(context, layoutRes, newOptions))
     }
 }
 
@@ -44,11 +44,13 @@ private const val TILE_FILL = 0x1AFFFFFF
 fun refreshOptionWidgets(ctx: Context) {
     val mgr = AppWidgetManager.getInstance(ctx)
     optionProviders.forEach { (cls, layout) ->
-        mgr.getAppWidgetIds(ComponentName(ctx, cls)).forEach { mgr.updateAppWidget(it, optionViews(ctx, layout)) }
+        mgr.getAppWidgetIds(ComponentName(ctx, cls)).forEach {
+            mgr.updateAppWidget(it, optionViews(ctx, layout, mgr.getAppWidgetOptions(it)))
+        }
     }
 }
 
-private fun optionViews(ctx: Context, layoutRes: Int): RemoteViews {
+private fun optionViews(ctx: Context, layoutRes: Int, opts: Bundle = Bundle.EMPTY): RemoteViews {
     val c = AppSettings.localized(ctx)
     val rv = RemoteViews(ctx.packageName, layoutRes)
     val launch = PrayerWidget.homePendingIntent(ctx)
@@ -59,8 +61,14 @@ private fun optionViews(ctx: Context, layoutRes: Int): RemoteViews {
     val fg = Color.WHITE
     val dim = 0xB3FFFFFF.toInt()
     val accent = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
-    // Fixed 1:1 square; inflate intrinsic density size so adjustViewBounds always fills min(cellW, cellH).
-    val bg = PrayerWidget.background(ctx, OPTION_SIDE_DP, OPTION_SIDE_DP, opacity, true, accent, fixedDarkBlue = true).apply {
+    val fill = AppSettings.bool(ctx, "widget_fill_square", def = false)
+    val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0).takeIf { it > 0 } ?: OPTION_SIDE_DP
+    val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0).takeIf { it > 0 } ?: OPTION_SIDE_DP
+    rv.setBoolean(R.id.opt_bg, "setAdjustViewBounds", !fill)
+    // In 1:1 mode, inflate intrinsic density size so adjustViewBounds always fills min(cellW, cellH).
+    val bg = PrayerWidget.background(
+        ctx, if (fill) minW else OPTION_SIDE_DP, if (fill) minH else OPTION_SIDE_DP, opacity, true, accent, fixedDarkBlue = true
+    ).apply {
         density = maxOf(1, ctx.resources.displayMetrics.densityDpi / 4)
     }
     rv.setImageViewBitmap(R.id.opt_bg, bg)
