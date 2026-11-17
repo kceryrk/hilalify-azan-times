@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:padding="3px">
 
     <ImageView
         android:id="@+id/widget_bg_img"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop" />
+
+    <ImageView
+        android:id="@+id/widget_fg_img"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY" />
 
     <LinearLayout
         android:id="@+id/widget_root"
@@ -33,6 +40,7 @@
                 android:id="@+id/widget_kerahat_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:fontFamily="@font/outfit_bold"
                 android:gravity="center"
                 android:paddingVertical="2dp"
                 android:singleLine="true"
@@ -46,6 +54,7 @@
             android:id="@+id/widget_next"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/outfit_bold"
             android:textColor="#FFFFFF"
             android:gravity="center_horizontal"
             android:textSize="16sp"
@@ -61,28 +70,28 @@
             android:orientation="horizontal">
 
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
-                <TextView android:id="@+id/widget_l0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
-                <TextView android:id="@+id/widget_t0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
+                <TextView android:id="@+id/widget_l0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_regular" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
+                <TextView android:id="@+id/widget_t0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_bold" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
             </LinearLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
-                <TextView android:id="@+id/widget_l1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
-                <TextView android:id="@+id/widget_t1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
+                <TextView android:id="@+id/widget_l1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_regular" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
+                <TextView android:id="@+id/widget_t1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_bold" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
             </LinearLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
-                <TextView android:id="@+id/widget_l2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
-                <TextView android:id="@+id/widget_t2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
+                <TextView android:id="@+id/widget_l2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_regular" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
+                <TextView android:id="@+id/widget_t2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_bold" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
             </LinearLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
-                <TextView android:id="@+id/widget_l3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
-                <TextView android:id="@+id/widget_t3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
+                <TextView android:id="@+id/widget_l3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_regular" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
+                <TextView android:id="@+id/widget_t3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_bold" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
             </LinearLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
-                <TextView android:id="@+id/widget_l4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
-                <TextView android:id="@+id/widget_t4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
+                <TextView android:id="@+id/widget_l4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_regular" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
+                <TextView android:id="@+id/widget_t4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_bold" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
             </LinearLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
-                <TextView android:id="@+id/widget_l5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
-                <TextView android:id="@+id/widget_t5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
+                <TextView android:id="@+id/widget_l5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_regular" android:textColor="#B3FFFFFF" android:textSize="9sp" android:singleLine="true" />
+                <TextView android:id="@+id/widget_t5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/outfit_bold" android:textColor="#FFFFD54F" android:textSize="12sp" android:textStyle="bold" android:singleLine="true" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

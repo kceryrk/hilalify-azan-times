@@ -11,10 +11,15 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.TypedValue
+import android.view.View
 import android.widget.RemoteViews
+import androidx.core.content.res.ResourcesCompat
 import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.math.max
@@ -38,6 +43,7 @@ class PrayerWidget : AppWidgetProvider() {
             ids.forEach { mgr.updateAppWidget(it, views(ctx, mgr.getAppWidgetOptions(it))) }
             refreshOptionWidgets(ctx)
             refreshDhikrWidgets(ctx)
+            refreshCountdownWidgets(ctx)
         }
 
         private fun Int.dp(ctx: Context): Int = (this * ctx.resources.displayMetrics.density).toInt()
@@ -75,7 +81,10 @@ class PrayerWidget : AppWidgetProvider() {
             val accent = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
             val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
             // The background is its own layer, so opacity fades only the panel and never the text.
-            rv.setImageViewBitmap(R.id.widget_bg_img, background(ctx, minW, minH, opacity, night, accent, fixedDarkBlue = true))
+            rv.setImageViewBitmap(
+                R.id.widget_bg_img,
+                background(ctx, minW, minH, opacity, night, accent, fixedDarkBlue = true, maxRadiusDp = if (large) 28f else 44f)
+            )
 
             val now = LocalDateTime.now()
             val next = PrayerRepo.upcoming(ctx, now)
@@ -86,36 +95,48 @@ class PrayerWidget : AppWidgetProvider() {
             val padH = (if (large) 14 else 6).dp(ctx)
             val padV = (if (large) 14 else if (compact) 4 else 6).dp(ctx)
             rv.setViewPadding(R.id.widget_root, padH, padV, padH, padV)
+            val today = PrayerRepo.today(ctx)
+            val rows = today?.entries?.toList().orEmpty()
+            val currentIdx = rows.indexOfLast { !it.value.isAfter(now.toLocalTime()) }
+            val nextStr = if (next != null) {
+                val mins = Duration.between(now, next.at).toMinutes()
+                "${c.getString(R.string.next_prayer, c.getString(next.prayer.labelRes))} · ${countdown(c, mins)}"
+            } else c.getString(R.string.no_times)
+            val kerahatStr = kerahat?.let { Kerahat.label(ctx, it.second, now) }
+
+            if (!large) {
+                rv.setViewVisibility(R.id.widget_root, View.GONE)
+                rv.setViewVisibility(R.id.widget_fg_img, View.VISIBLE)
+                rv.setImageViewBitmap(
+                    R.id.widget_fg_img,
+                    foreground4x1Bitmap(
+                        ctx, c, minW, minH, compact, showNext, showTimes,
+                        kerahatStr, nextStr, rows, currentIdx, accent, fg, dim
+                    )
+                )
+                return rv
+            }
+
+            rv.setViewVisibility(R.id.widget_root, View.VISIBLE)
             rv.setViewVisibility(R.id.widget_next, visibleIf(showNext))
             rv.setViewVisibility(R.id.widget_grid, visibleIf(showTimes))
 
             rv.setViewVisibility(R.id.widget_kerahat, visibleIf(kerahat != null))
-            if (kerahat != null) {
+            if (kerahatStr != null) {
                 rv.setImageViewBitmap(R.id.widget_kerahat_hatch, Kerahat.hatch(width = 600, height = 60, color = dim))
-                rv.setTextViewText(R.id.widget_kerahat_text, Kerahat.label(ctx, kerahat.second, now))
+                rv.setTextViewText(R.id.widget_kerahat_text, kerahatStr)
                 rv.setTextColor(R.id.widget_kerahat_text, fg)
-                rv.setTextViewTextSize(R.id.widget_kerahat_text, TypedValue.COMPLEX_UNIT_SP, if (large) 15f else 11f)
+                rv.setTextViewTextSize(R.id.widget_kerahat_text, TypedValue.COMPLEX_UNIT_SP, 15f)
             }
 
-            if (next != null) {
-                val mins = Duration.between(now, next.at).toMinutes()
-                rv.setTextViewText(
-                    R.id.widget_next,
-                    "${c.getString(R.string.next_prayer, c.getString(next.prayer.labelRes))} · ${countdown(c, mins)}"
-                )
-            } else {
-                rv.setTextViewText(R.id.widget_next, c.getString(R.string.no_times))
-            }
-            rv.setTextViewTextSize(R.id.widget_next, TypedValue.COMPLEX_UNIT_SP, if (large) 26f else if (compact) 16f else 18f)
+            rv.setTextViewText(R.id.widget_next, nextStr)
+            rv.setTextViewTextSize(R.id.widget_next, TypedValue.COMPLEX_UNIT_SP, 26f)
             rv.setTextColor(R.id.widget_next, fg)
 
-            val today = PrayerRepo.today(ctx)
-            val rows = today?.entries?.toList().orEmpty()
-            val currentIdx = rows.indexOfLast { !it.value.isAfter(now.toLocalTime()) }
             val labelIds = intArrayOf(R.id.widget_l0, R.id.widget_l1, R.id.widget_l2, R.id.widget_l3, R.id.widget_l4, R.id.widget_l5)
             val timeIds = intArrayOf(R.id.widget_t0, R.id.widget_t1, R.id.widget_t2, R.id.widget_t3, R.id.widget_t4, R.id.widget_t5)
-            val labelTextSize = if (compact) 10f else 11f
-            val timeTextSize = if (compact) 13f else 14f
+            val labelTextSize = 11f
+            val timeTextSize = 14f
             for (i in labelIds.indices) {
                 val row = rows.getOrNull(i)
                 val isCurrent = i == currentIdx
@@ -129,8 +150,106 @@ class PrayerWidget : AppWidgetProvider() {
             return rv
         }
 
+        /** Renders crisp Outfit-font 4x1 widget text onto its own transparent layer so launcher fonts cannot override it. */
+        private fun foreground4x1Bitmap(
+            ctx: Context,
+            c: Context,
+            minW: Int,
+            minH: Int,
+            compact: Boolean,
+            showNext: Boolean,
+            showTimes: Boolean,
+            kerahatStr: String?,
+            nextStr: String,
+            rows: List<Map.Entry<Prayer, java.time.LocalTime>>,
+            currentIdx: Int,
+            accent: Int,
+            fg: Int,
+            dim: Int
+        ): Bitmap {
+            val d = ctx.resources.displayMetrics.density
+            val w = (if (minW > 0) minW else 250) * d
+            val h = (if (minH > 0) minH else 50) * d
+            val scale = minOf(1f, sqrt(400_000f / (w * h * 4)))
+            val bw = max(1, (w * scale).toInt())
+            val bh = max(1, (h * scale).toInt())
+            val s = d * scale
+            val bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+
+            val padH = 8f * s
+            val contentW = (bw - padH * 2f).coerceAtLeast(1f)
+            val outfit = runCatching { ResourcesCompat.getFont(ctx, R.font.outfit) }.getOrNull()
+            val boldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                typeface = outfit ?: Typeface.DEFAULT_BOLD
+                fontVariationSettings = "'wght' 700"
+                textAlign = Paint.Align.CENTER
+            }
+            val regPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                typeface = outfit ?: Typeface.DEFAULT
+                fontVariationSettings = "'wght' 400"
+                textAlign = Paint.Align.CENTER
+            }
+
+            val topLabelText = kerahatStr ?: if (showNext) nextStr else null
+            val topSize = (if (kerahatStr != null) 11.5f else if (compact) 15f else 17f) * s
+            val labelSize = (if (compact) 9.5f else 10.5f) * s
+            val timeSize = (if (compact) 12.5f else 13.5f) * s
+            val topH = if (topLabelText != null) topSize * 1.25f else 0f
+            val gridH = if (showTimes) (labelSize + timeSize) * 1.2f else 0f
+            val gap = if (topLabelText != null && showTimes) (if (compact) 2f else 4f) * s else 0f
+            var curY = (bh - (topH + gap + gridH)) * 0.5f
+
+            if (topLabelText != null) {
+                boldPaint.color = fg
+                boldPaint.textSize = topSize
+                val tw = boldPaint.measureText(topLabelText)
+                if (tw > contentW) boldPaint.textSize *= contentW / tw
+                val fm = boldPaint.fontMetrics
+                canvas.drawText(topLabelText, bw * 0.5f, curY + topH * 0.5f - (fm.ascent + fm.descent) * 0.5f, boldPaint)
+                curY += topH + gap
+            }
+
+            if (showTimes && rows.isNotEmpty()) {
+                val count = minOf(6, rows.size)
+                val colW = contentW / count
+                val labelCy = curY + labelSize * 0.6f
+                val timeCy = curY + labelSize * 1.2f + timeSize * 0.6f
+                for (i in 0 until count) {
+                    val row = rows[i]
+                    val isCurrent = i == currentIdx
+                    val cx = padH + colW * (i + 0.5f)
+                    val label = c.getString(row.key.labelRes)
+                    regPaint.color = if (isCurrent) accent else dim
+                    regPaint.textSize = labelSize
+                    val lw = regPaint.measureText(label)
+                    if (lw > colW * 0.92f) regPaint.textSize *= (colW * 0.92f) / lw
+                    val lFm = regPaint.fontMetrics
+                    canvas.drawText(label, cx, labelCy - (lFm.ascent + lFm.descent) * 0.5f, regPaint)
+
+                    val tStr = row.value.toString()
+                    boldPaint.color = if (isCurrent) accent else fg
+                    boldPaint.textSize = timeSize
+                    val tw = boldPaint.measureText(tStr)
+                    if (tw > colW * 0.92f) boldPaint.textSize *= (colW * 0.92f) / tw
+                    val tFm = boldPaint.fontMetrics
+                    canvas.drawText(tStr, cx, timeCy - (tFm.ascent + tFm.descent) * 0.5f, boldPaint)
+                }
+            }
+            return bmp
+        }
+
         /** Accent-tinted rounded panel with stars, at the user's opacity. Sized to the widget and kept under RemoteViews' size limit. */
-        internal fun background(ctx: Context, minW: Int, minH: Int, opacity: Int, night: Boolean, accent: Int, fixedDarkBlue: Boolean = false): Bitmap {
+        internal fun background(
+            ctx: Context,
+            minW: Int,
+            minH: Int,
+            opacity: Int,
+            night: Boolean,
+            accent: Int,
+            fixedDarkBlue: Boolean = false,
+            maxRadiusDp: Float = 28f
+        ): Bitmap {
             val d = ctx.resources.displayMetrics.density
             val w = (if (minW > 0) minW else 250) * d
             val h = (if (minH > 0) minH else 50) * d
@@ -141,18 +260,24 @@ class PrayerWidget : AppWidgetProvider() {
             val top = if (fixedDarkBlue) 0xFF1B2A4E.toInt() else if (night) mix(accent, 0xFF1B2A4E.toInt(), 0.45f) else mix(accent, Color.WHITE, 0.85f)
             val bottom = if (fixedDarkBlue) 0xFF0A1226.toInt() else if (night) mix(accent, 0xFF0A1226.toInt(), 0.8f) else mix(accent, Color.WHITE, 0.6f)
             val bg = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(top, bottom))
-            bg.cornerRadius = 28 * d * scale
+            bg.cornerRadius = minOf(maxRadiusDp * d * scale, minOf(bw, bh) * 0.5f)
             if (!fixedDarkBlue) bg.setStroke(max(1, (d * scale).roundToInt()), if (night) 0x33FFFFFF else 0x33000000)
             bg.setBounds(0, 0, bw, bh)
             bg.alpha = opacity * 255 / 100
             val canvas = Canvas(bmp)
             bg.draw(canvas)
+            val clipPath = Path().apply {
+                addRoundRect(RectF(0f, 0f, bw.toFloat(), bh.toFloat()), bg.cornerRadius, bg.cornerRadius, Path.Direction.CW)
+            }
+            canvas.save()
+            canvas.clipPath(clipPath)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
             val starAlpha = opacity / 100f
             Stars.home.forEach { s ->
                 paint.alpha = (s.alpha * starAlpha * 255).toInt()
                 canvas.drawCircle(s.x * bw, s.y * bh, s.radiusDp * d * scale * 0.55f, paint)
             }
+            canvas.restore()
             return bmp
         }
 

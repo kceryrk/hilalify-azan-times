@@ -12,7 +12,7 @@ import androidx.core.location.LocationManagerCompat
 import java.util.concurrent.atomic.AtomicBoolean
 
 object LocationHelper {
-    private const val TIMEOUT_MS = 3_500L
+    private const val TIMEOUT_MS = 6_000L
 
     /**
      * Returns a recent cached fix immediately when available, or races enabled providers (preferring fast
@@ -36,8 +36,11 @@ object LocationHelper {
                 onResult(loc ?: cached)
             }
         }
-        val providers = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
-            .filter { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
+        val providers = buildList {
+            if (android.os.Build.VERSION.SDK_INT >= 31) add(LocationManager.FUSED_PROVIDER)
+            add(LocationManager.NETWORK_PROVIDER)
+            add(LocationManager.GPS_PROVIDER)
+        }.filter { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
         if (providers.isEmpty()) return finish(null)
 
         main.postDelayed({ finish(null) }, TIMEOUT_MS)
@@ -52,8 +55,10 @@ object LocationHelper {
 
 
     @SuppressLint("MissingPermission")
-    private fun lastKnown(lm: LocationManager): Location? =
-        listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-            .mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }
-            .maxByOrNull { it.time }
+    private fun lastKnown(lm: LocationManager): Location? = buildList {
+        if (android.os.Build.VERSION.SDK_INT >= 31) add(LocationManager.FUSED_PROVIDER)
+        add(LocationManager.GPS_PROVIDER)
+        add(LocationManager.NETWORK_PROVIDER)
+    }.mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }
+        .maxByOrNull { it.time }
 }

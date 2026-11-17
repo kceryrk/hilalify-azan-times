@@ -22,10 +22,13 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -40,6 +43,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -151,31 +156,42 @@ private fun AccentPickerRow(onAccentChanged: () -> Unit) {
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Spacer(Modifier.height(10.dp))
-    Row(
-        Modifier.fillMaxWidth().height(48.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically
+    @OptIn(ExperimentalLayoutApi::class)
+    FlowRow(
+        Modifier.fillMaxWidth(),
+        maxItemsInEachRow = 6,
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        listOf(0xFF00A86B, 0xFF0A84FF, 0xFFFF375F, 0xFFFF9F0A, 0xFFBF5AF2, 0xFF64D2FF).forEach { argb ->
+        ACCENT_COLORS.forEach { argb ->
             val value = argb.toInt()
             val selected = value == currentAccent
-            val dotSize by animateDpAsState(if (selected) 44.dp else 30.dp, label = "accent-dot")
+            val dotSize by animateDpAsState(if (selected) 40.dp else 30.dp, label = "accent-dot")
             Box(
                 Modifier
-                    .size(dotSize)
-                    .clip(CircleShape)
-                    .background(Color(value))
-                    .border(
-                        if (selected) 3.dp else 0.dp,
-                        if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                        CircleShape
-                    )
-                    .clickable {
+                    .size(42.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
                         currentAccent = value
                         AppSettings.put(ctx, "accent", value)
                         onAccentChanged()
-                    }
-            )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    Modifier
+                        .size(dotSize)
+                        .clip(CircleShape)
+                        .background(Color(value))
+                        .border(
+                            if (selected) 3.dp else 0.dp,
+                            if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                            CircleShape
+                        )
+                )
+            }
         }
     }
 }
@@ -215,7 +231,7 @@ private fun WelcomeStep(accent: Color, onAccentChanged: () -> Unit, onGetStarted
             accent = accent,
             icon = Icons.Filled.Home,
             title = stringResource(R.string.welcome_feat1_title),
-            desc = stringResource(R.string.welcome_feat1_desc)
+            desc = islandStr(R.string.welcome_feat1_desc, R.string.welcome_feat1_desc_live)
         )
         Spacer(Modifier.height(12.dp))
         FeatureGlassCard(
@@ -237,14 +253,12 @@ private fun WelcomeStep(accent: Color, onAccentChanged: () -> Unit, onGetStarted
 
         Spacer(Modifier.weight(1f, fill = true))
         Spacer(Modifier.height(24.dp))
-        Button(
+        GlassPrimaryButton(
+            text = stringResource(R.string.get_started),
+            accent = accent,
             onClick = onGetStarted,
-            colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = contrast),
-            shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth().height(54.dp)
-        ) {
-            Text(stringResource(R.string.get_started), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        }
+        )
     }
 }
 
@@ -309,7 +323,7 @@ private fun SetupStep(
     var kerahatOn by remember { mutableStateOf(AppSettings.bool(ctx, "kerahat", true)) }
     var realMoonIcon by remember { mutableStateOf(AppSettings.bool(ctx, "real_moon_icon", true)) }
 
-    fun detectGps() {
+    fun detectGps(retryOnNull: Boolean = true) {
         detecting = true
         LocationHelper.current(ctx) { loc ->
             if (loc != null) {
@@ -320,15 +334,20 @@ private fun SetupStep(
                     detecting = false
                     withContext(Dispatchers.IO) { PrayerRepo.refresh(ctx) }
                 }
+            } else if (retryOnNull) {
+                scope.launch {
+                    delay(500)
+                    detectGps(retryOnNull = false)
+                }
             } else {
                 detecting = false
             }
         }
     }
 
-    val gpsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+    val gpsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { perms ->
         permTick++
-        if (hasLocPerm(ctx)) detectGps()
+        if (perms.values.any { it } || hasLocPerm(ctx)) detectGps()
     }
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         permTick++
@@ -344,6 +363,11 @@ private fun SetupStep(
     }
 
     val locGranted = remember(permTick) { hasLocPerm(ctx) }
+    LaunchedEffect(gpsMode, locGranted) {
+        if (gpsMode && locGranted && locationLabel == null && !detecting) {
+            detectGps()
+        }
+    }
     val notifGranted = remember(permTick) { NotificationManagerCompat.from(ctx).areNotificationsEnabled() }
     val exactGranted = remember(permTick) {
         Build.VERSION.SDK_INT < 31 || ctx.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
@@ -414,7 +438,7 @@ private fun SetupStep(
                         Icon(Icons.Filled.LocationOn, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.use_gps), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                        Switch(
+                        IosSwitch(
                             checked = gpsMode,
                             onCheckedChange = {
                                 gpsMode = it
@@ -426,6 +450,7 @@ private fun SetupStep(
                     if (gpsMode) {
                         Spacer(Modifier.height(8.dp))
                         val statusText = when {
+                            !locGranted -> stringResource(R.string.setup_loc_perm_needed)
                             detecting -> stringResource(R.string.setup_detecting)
                             locationLabel != null -> stringResource(R.string.gps_city, locationLabel!!)
                             else -> stringResource(R.string.gps_city_unknown)
@@ -433,19 +458,20 @@ private fun SetupStep(
                         Text(statusText, style = MaterialTheme.typography.bodyMedium, color = accent)
                         if (!locGranted) {
                             Spacer(Modifier.height(10.dp))
-                            OutlinedButton(
+                            GlassSecondaryButton(
+                                text = stringResource(R.string.setup_grant_gps),
                                 onClick = {
                                     gpsLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
                                 },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(stringResource(R.string.setup_grant_gps))
-                            }
+                                modifier = Modifier.fillMaxWidth().height(46.dp)
+                            )
                         } else if (locationLabel == null && !detecting) {
                             Spacer(Modifier.height(10.dp))
-                            OutlinedButton(onClick = { detectGps() }, modifier = Modifier.fillMaxWidth()) {
-                                Text(stringResource(R.string.setup_grant_gps))
-                            }
+                            GlassSecondaryButton(
+                                text = stringResource(R.string.setup_detect_gps),
+                                onClick = { detectGps() },
+                                modifier = Modifier.fillMaxWidth().height(46.dp)
+                            )
                         }
                     } else {
                         Spacer(Modifier.height(10.dp))
@@ -482,7 +508,11 @@ private fun SetupStep(
             // 3. Permissions
             SetupHeader(stringResource(R.string.setup_perms_title), accent)
             GlassCard {
-                SetupPermissionRow(stringResource(R.string.perm_notif), notifGranted) {
+                SetupPermissionRow(
+                    stringResource(R.string.perm_notif),
+                    stringResource(R.string.perm_notif_desc),
+                    notifGranted
+                ) {
                     if (Build.VERSION.SDK_INT >= 33) {
                         notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     } else {
@@ -490,16 +520,28 @@ private fun SetupStep(
                     }
                 }
                 HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-                SetupPermissionRow(stringResource(R.string.perm_exact), exactGranted) {
+                SetupPermissionRow(
+                    stringResource(R.string.perm_exact),
+                    stringResource(R.string.perm_exact_desc),
+                    exactGranted
+                ) {
                     ctx.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${ctx.packageName}")))
                 }
                 HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-                SetupPermissionRow(stringResource(R.string.perm_notif_policy), dndGranted) {
+                SetupPermissionRow(
+                    stringResource(R.string.perm_notif_policy),
+                    stringResource(R.string.perm_dnd_desc),
+                    dndGranted
+                ) {
                     ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
                 }
                 if (Build.VERSION.SDK_INT >= 36) {
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-                    SetupPermissionRow("Live Updates / Dynamic Island", promotedGranted) {
+                    SetupPermissionRow(
+                        islandStr(R.string.perm_island_title, R.string.perm_live_title),
+                        islandStr(R.string.perm_island_desc, R.string.perm_live_desc),
+                        promotedGranted
+                    ) {
                         val i = Intent("android.settings.APP_NOTIFICATION_PROMOTION_SETTINGS").putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
                         try { ctx.startActivity(i) } catch (_: Exception) {
                             ctx.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName))
@@ -514,7 +556,7 @@ private fun SetupStep(
             GlassCard {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.notif_on), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = notifOn, onCheckedChange = {
+                    IosSwitch(checked = notifOn, onCheckedChange = {
                         notifOn = it
                         AppSettings.put(ctx, "notif_on", it)
                     })
@@ -522,15 +564,17 @@ private fun SetupStep(
                 HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.kerahat_setting), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = kerahatOn, onCheckedChange = {
+                    IosSwitch(checked = kerahatOn, onCheckedChange = {
                         kerahatOn = it
                         AppSettings.put(ctx, "kerahat", it)
                     })
                 }
                 HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.real_moon_icon), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = realMoonIcon, onCheckedChange = {
+                    RealMoonPreview(realMoonIcon)
+                    Spacer(Modifier.width(12.dp))
+                    Text(stringResource(R.string.real_moon_icon), Modifier.weight(1f).padding(end = 8.dp), style = MaterialTheme.typography.bodyLarge)
+                    IosSwitch(checked = realMoonIcon, onCheckedChange = {
                         realMoonIcon = it
                         AppSettings.put(ctx, "real_moon_icon", it)
                     })
@@ -549,24 +593,20 @@ private fun SetupStep(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            OutlinedButton(
+            GlassSecondaryButton(
+                text = stringResource(R.string.back),
                 onClick = onBack,
-                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.weight(1f).height(52.dp)
-            ) {
-                Text(stringResource(R.string.back))
-            }
-            Button(
+            )
+            GlassPrimaryButton(
+                text = stringResource(R.string.setup_finish),
+                accent = accent,
                 onClick = {
                     AppSettings.put(ctx, "onboarding_done", true)
                     onFinish()
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = contrast),
-                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.weight(1.7f).height(52.dp)
-            ) {
-                Text(stringResource(R.string.setup_finish), fontWeight = FontWeight.SemiBold)
-            }
+            )
         }
     }
 }
@@ -580,6 +620,63 @@ private fun SetupHeader(text: String, accent: Color) {
         color = accent,
         modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
     )
+}
+
+@Composable
+internal fun GlassPrimaryButton(
+    text: String,
+    accent: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp)
+) {
+    val top = lerp(accent, Color.White, 0.22f)
+    val bottom = lerp(accent, Color.Black, 0.16f)
+    val textColor = if (accent.luminance() > 0.5f) Color.Black else Color.White
+    Box(
+        modifier
+            .shadow(10.dp, shape, ambientColor = accent.copy(alpha = 0.45f), spotColor = accent.copy(alpha = 0.45f))
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(top, accent, bottom)))
+            .border(
+                1.dp,
+                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f))),
+                shape
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = textColor)
+    }
+}
+
+@Composable
+internal fun GlassSecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp)
+) {
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val top = if (dark) Color.White.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.78f)
+    val bottom = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.42f)
+    Box(
+        modifier
+            .shadow(6.dp, shape, ambientColor = Color.Black.copy(alpha = 0.22f), spotColor = Color.Black.copy(alpha = 0.22f))
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(top, bottom)))
+            .border(
+                1.dp,
+                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))),
+                shape
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+    }
 }
 
 @Composable
@@ -604,7 +701,7 @@ private fun GlassCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun SetupPermissionRow(title: String, granted: Boolean, onGrant: () -> Unit) {
+private fun SetupPermissionRow(title: String, desc: String, granted: Boolean, onGrant: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -615,7 +712,7 @@ private fun SetupPermissionRow(title: String, granted: Boolean, onGrant: () -> U
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(
-                stringResource(if (granted) R.string.perm_granted else R.string.perm_missing),
+                desc,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -640,7 +737,15 @@ private fun SetupPermissionRow(title: String, granted: Boolean, onGrant: () -> U
                 }
             }
         } else {
-            Text(stringResource(R.string.perm_missing), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            val missing = stringResource(R.string.perm_missing)
+                .replace(". ", ".\n")
+                .replace("。", "。\n")
+            Text(
+                missing,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.End
+            )
         }
     }
 }

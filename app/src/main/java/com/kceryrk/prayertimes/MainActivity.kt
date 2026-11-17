@@ -143,6 +143,20 @@ import kotlin.math.roundToInt
 
 /** Default app accent (vibrant emerald), stored as ARGB in prefs under "accent". */
 internal val DEFAULT_ACCENT_ARGB: Int = 0xFF00A86B.toInt()
+internal val ACCENT_COLORS = listOf(
+    0xFF8B0000, // Dark Red
+    0xFFFF375F, // Red
+    0xFFFF85A2, // Light Pink
+    0xFFFF9F0A, // Orange
+    0xFF8D6E63, // Brown
+    0xFFFFD60A, // Yellow
+    0xFF00A86B, // Green
+    0xFF1ABC9C, // Turquoise
+    0xFF64D2FF, // Cyan
+    0xFF0A84FF, // Blue
+    0xFFBF5AF2, // Purple
+    0xFF8E8E93, // Gray
+)
 
 class MainActivity : ComponentActivity() {
 
@@ -174,6 +188,26 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Alarms.appInForeground = true
+        if (AppSettings.bool(this, "onboarding_done", false)) {
+            Alarms.triggerRestingPeek(this, autoHide = false)
+        }
+    }
+
+    override fun onStop() {
+        Alarms.appInForeground = false
+        if (!isChangingConfigurations && AppSettings.bool(this, "onboarding_done", false)) {
+            if (getSystemService(android.os.PowerManager::class.java).isInteractive) {
+                Alarms.triggerRestingPeek(this, autoHide = true)
+            } else {
+                Alarms.cancelRestingPeek(this)
+            }
+        }
+        super.onStop()
     }
 
     override fun onDestroy() {
@@ -743,6 +777,7 @@ class MainActivity : ComponentActivity() {
             Box(
                 Modifier
                     .padding(inset)
+                    .clip(CircleShape)
                     .pointerInput(barSize) {
                         detectHorizontalDragGestures(
                             onDragStart = { offset ->
@@ -778,16 +813,18 @@ class MainActivity : ComponentActivity() {
                     Modifier
                         .height(slotHeight)
                         .graphicsLayer {
+                            clip = true
+                            shape = CircleShape
                             // Offscreen so the SrcAtop mask below recolors only the icon pixels.
                             compositingStrategy = CompositingStrategy.Offscreen
                             // Icons bend only around the selector's inside edge; strength eases to 0 at rest.
-                            if (Build.VERSION.SDK_INT >= 33 && slotPx > 0f) {
-                                renderEffect = lens?.effectFor(
+                            renderEffect = if (Build.VERSION.SDK_INT >= 33 && slotPx > 0f && lensAmount > 0.001f) {
+                                lens?.effectFor(
                                     position * slotPx + slotPx / 2f, slotHeightPx / 2f,
                                     slotPx / 2f, slotHeightPx / 2f,
                                     slotHeightPx / 2f, with(density) { 14.dp.toPx() }, with(density) { 10.dp.toPx() } * lensAmount
                                 )
-                            }
+                            } else null
                         }
                         .drawWithContent {
                             drawContent()

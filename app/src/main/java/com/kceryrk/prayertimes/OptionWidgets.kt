@@ -9,8 +9,11 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Typeface
 import android.os.Bundle
+import android.view.View
 import android.widget.RemoteViews
+import androidx.core.content.res.ResourcesCompat
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -78,14 +81,22 @@ private fun optionViews(ctx: Context, layoutRes: Int, opts: Bundle = Bundle.EMPT
     val rows = PrayerRepo.today(ctx)?.entries?.toList().orEmpty()
     val currentIdx = rows.indexOfLast { !it.value.isAfter(now.toLocalTime()) }
 
-    rv.setTextViewText(R.id.opt_next, next?.let { c.getString(it.prayer.labelRes) } ?: c.getString(R.string.no_times))
-    rv.setTextColor(R.id.opt_next, fg)
+    val nextLabel = next?.let { c.getString(it.prayer.labelRes) } ?: c.getString(R.string.no_times)
     val mins = next?.let { Duration.between(now, it.at).toMinutes() }
-    rv.setTextViewText(R.id.opt_count, mins?.let { PrayerWidget.countdown(c, it) } ?: "")
-    rv.setTextColor(R.id.opt_count, accent)
+    val countLabel = mins?.let { PrayerWidget.countdown(c, it) } ?: ""
+
+    val isRing = layoutRes == R.layout.widget_opt_ring
+    rv.setViewVisibility(R.id.opt_next, visibleIf(!isRing))
+    rv.setViewVisibility(R.id.opt_count, visibleIf(!isRing))
+    if (!isRing) {
+        rv.setTextViewText(R.id.opt_next, nextLabel)
+        rv.setTextColor(R.id.opt_next, fg)
+        rv.setTextViewText(R.id.opt_count, countLabel)
+        rv.setTextColor(R.id.opt_count, accent)
+    }
 
     val isGrid = layoutRes == R.layout.widget_opt_grid
-    if (layoutRes != R.layout.widget_opt_ring) for (i in labelIds.indices) {
+    if (!isRing) for (i in labelIds.indices) {
         val row = rows.getOrNull(i)
         val isCurrent = i == currentIdx
         // The grid shows the next prayer as a solid accent tile, so its text switches to dark.
@@ -97,9 +108,13 @@ private fun optionViews(ctx: Context, layoutRes: Int, opts: Bundle = Bundle.EMPT
         if (isGrid) rv.setImageViewBitmap(tileIds[i], tileBitmap(ctx, if (isCurrent) accent else TILE_FILL))
     }
 
-    if (layoutRes == R.layout.widget_opt_ring) {
+    if (isRing) {
         val prevAt = if (currentIdx >= 0) LocalDateTime.of(now.toLocalDate(), rows[currentIdx].value) else null
-        rv.setImageViewBitmap(R.id.opt_ring, ringBitmap(ctx, prevAt, next?.at, now, accent, fg))
+        val ringDp = if (fill) minOf(minW, minH) else OPTION_SIDE_DP
+        rv.setImageViewBitmap(
+            R.id.opt_ring,
+            ringBitmap(ctx, ringDp, prevAt, next?.at, now, accent, fg, nextLabel, countLabel)
+        )
     }
     return rv
 }
@@ -114,9 +129,19 @@ private fun tileBitmap(ctx: Context, fill: Int): Bitmap {
     return bmp
 }
 
-/** Progress ring from the previous prayer to the next one. */
-private fun ringBitmap(ctx: Context, prevAt: LocalDateTime?, nextAt: LocalDateTime?, now: LocalDateTime, accent: Int, track: Int): Bitmap {
-    val size = (150 * ctx.resources.displayMetrics.density).toInt()
+/** Progress ring from the previous prayer to the next one, with auto-sized Outfit text centered inside. */
+private fun ringBitmap(
+    ctx: Context,
+    sideDp: Int,
+    prevAt: LocalDateTime?,
+    nextAt: LocalDateTime?,
+    now: LocalDateTime,
+    accent: Int,
+    track: Int,
+    title: String,
+    countdown: String
+): Bitmap {
+    val size = (sideDp.coerceAtLeast(120) * ctx.resources.displayMetrics.density).toInt()
     val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
     val stroke = size * 0.07f
@@ -137,5 +162,40 @@ private fun ringBitmap(ctx: Context, prevAt: LocalDateTime?, nextAt: LocalDateTi
     paint.color = accent
     paint.alpha = 255
     canvas.drawArc(rect, -90f, 360f * fraction, false, paint)
+
+    val outfit = runCatching { ResourcesCompat.getFont(ctx, R.font.outfit) }.getOrNull()
+    val maxTextW = (size - stroke * 2f) * 0.72f
+    val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textAlign = Paint.Align.CENTER
+        typeface = outfit ?: Typeface.DEFAULT_BOLD
+        fontVariationSettings = "'wght' 700"
+        textSize = size * 0.145f
+    }
+    val tw = titlePaint.measureText(title).coerceAtLeast(1f)
+    if (tw > maxTextW) titlePaint.textSize *= maxTextW / tw
+
+    val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = accent
+        textAlign = Paint.Align.CENTER
+        typeface = outfit ?: Typeface.DEFAULT
+        fontVariationSettings = "'wght' 500"
+        textSize = size * 0.115f
+    }
+    if (countdown.isNotEmpty()) {
+        val sw = subPaint.measureText(countdown).coerceAtLeast(1f)
+        if (sw > maxTextW) subPaint.textSize *= maxTextW / sw
+    }
+
+    val tFm = titlePaint.fontMetrics
+    val sFm = subPaint.fontMetrics
+    val tH = tFm.descent - tFm.ascent
+    val sH = if (countdown.isNotEmpty()) sFm.descent - sFm.ascent else 0f
+    val gap = if (countdown.isNotEmpty()) size * 0.025f else 0f
+    val topY = (size - (tH + gap + sH)) * 0.5f
+    canvas.drawText(title, size * 0.5f, topY - tFm.ascent, titlePaint)
+    if (countdown.isNotEmpty()) {
+        canvas.drawText(countdown, size * 0.5f, topY + tH + gap - sFm.ascent, subPaint)
+    }
     return bmp
 }

@@ -50,9 +50,61 @@ object Alarms {
     const val CH_SAHUR = "sahur"
     const val CH_REMINDER = "reminder"
     const val NOTIF_STATUS = 1001
+    private const val NOTIF_PEEK = 1002
+    const val NOTIF_LIVE = 1003
     private const val NOTIF_SAHUR = 1100
     private const val NOTIF_JUMUAH = 1101
     private const val NOTIF_QADA = 1102
+    private const val RESTING_PEEK_DEFAULT_SEC = 5
+
+    @Volatile
+    var appInForeground = false
+
+    private val peekHandler = Handler(Looper.getMainLooper())
+    private var peekRunnable: Runnable? = null
+
+    /**
+     * Promotes the resting notification to Dynamic Island (`NOTIF_PEEK`) when
+     * `resting_island_mode == "timeout"`, either persistently while the app is open (`autoHide = false`)
+     * or transiently for `resting_island_sec` seconds on unlock / leaving the app (`autoHide = true`).
+     */
+    fun triggerRestingPeek(ctx: Context, autoHide: Boolean = true) {
+        val appCtx = ctx.applicationContext
+        val mode = AppSettings.str(appCtx, "resting_island_mode", "timeout")
+        if (mode != "timeout") {
+            cancelRestingPeek(appCtx)
+            updateStatus(appCtx)
+            return
+        }
+        updateStatus(appCtx)
+        if (!AppSettings.bool(appCtx, "notif_on")) return
+        val now = LocalDateTime.now()
+        val next = PrayerRepo.upcoming(appCtx, now) ?: return
+        val mins = Duration.between(now, next.at).toMinutes().coerceAtLeast(0)
+        if (mins < 60) return
+        val peekNotif = buildStatusNotification(appCtx, forceLivePeek = true)
+        if (peekNotif.channelId != CH_STATUS_LIVE) return
+        val nm = appCtx.getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIF_PEEK, peekNotif)
+        peekRunnable?.let { peekHandler.removeCallbacks(it) }
+        peekRunnable = null
+        if (autoHide) {
+            val sec = AppSettings.int(appCtx, "resting_island_sec", RESTING_PEEK_DEFAULT_SEC).coerceIn(2, 30)
+            val r = Runnable {
+                peekRunnable = null
+                nm.cancel(NOTIF_PEEK)
+            }
+            peekRunnable = r
+            peekHandler.postDelayed(r, sec * 1_000L)
+        }
+    }
+
+    /** Hides any active resting Dynamic Island peek immediately (e.g. when screen locks / AOD starts). */
+    fun cancelRestingPeek(ctx: Context) {
+        peekRunnable?.let { peekHandler.removeCallbacks(it) }
+        peekRunnable = null
+        ctx.getSystemService(NotificationManager::class.java).cancel(NOTIF_PEEK)
+    }
     private const val NOTIF_KERAHAT = 1103
     private const val REQ_ADHAN = 2001
     private const val REQ_TICK = 2002
@@ -197,7 +249,7 @@ object Alarms {
         }
     }
 
-    fun buildStatusNotification(ctx: Context): Notification {
+    fun buildStatusNotification(ctx: Context, forceLivePeek: Boolean = false): Notification {
         val c = AppSettings.localized(ctx)
         val now = LocalDateTime.now()
         val next = PrayerRepo.upcoming(ctx, now)
@@ -205,7 +257,7 @@ object Alarms {
         val interactive = ctx.getSystemService(android.os.PowerManager::class.java).isInteractive
         val locked = ctx.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked
         val hideLock = AppSettings.bool(ctx, "notif_hide_lockscreen", def = false)
-        val legacyNotif = AppSettings.bool(ctx, "legacy_notif", def = false)
+        val newNotifStyle = AppSettings.bool(ctx, "new_notif_style", def = AppSettings.isHyperOs3Plus())
         val islandLive = AppSettings.bool(ctx, "island_live", def = true)
 
         val rows = today?.entries?.toList().orEmpty()
@@ -229,7 +281,7 @@ object Alarms {
         // Split notification into resting (>= 60 min) and active countdown (< 60 min).
         // Resting notification is hidden on AOD / lock screen without needing a setting.
         val isCountdown = mins != null && mins < 60
-        val hideRestingAod = !isCountdown && (!interactive || locked)
+        val hideRestingAod = !isCountdown && !forceLivePeek && (!interactive || locked)
         val effectiveHideLock = hideLock || hideRestingAod
         val visCompat = if (effectiveHideLock) NotificationCompat.VISIBILITY_SECRET else NotificationCompat.VISIBILITY_PUBLIC
         val visNative = if (effectiveHideLock) Notification.VISIBILITY_SECRET else Notification.VISIBILITY_PUBLIC
@@ -243,9 +295,10 @@ object Alarms {
         val nextMillis = next?.at?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
             ?.takeIf { it > System.currentTimeMillis() }
 
-        val canLive = Build.VERSION.SDK_INT >= 36 &&
-            ctx.getSystemService(NotificationManager::class.java).canPostPromotedNotifications()
-        if (canLive && nextMillis != null && islandLive && !legacyNotif && !hideRestingAod && !(hideLock && (!interactive || locked))) {
+        val canLive = Build.VERSION.SDK_INT >= 36
+        val restingMode = AppSettings.str(ctx, "resting_island_mode", "timeout")
+        val allowIslandNow = isCountdown || restingMode == "always" || (restingMode == "timeout" && forceLivePeek)
+        if (canLive && nextMillis != null && islandLive && newNotifStyle && allowIslandNow && !hideRestingAod && !(hideLock && !forceLivePeek && (!interactive || locked))) {
             val islandMode = AppSettings.str(ctx, "island_vakit", "current")
             val chip = if (!isCountdown && islandMode == "current" && currentIdx >= 0) {
                 c.getString(rows[currentIdx].key.labelRes)
@@ -260,8 +313,10 @@ object Alarms {
             }
 
             fun buildLive(useCustomView: Boolean): Notification {
+                val accent = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
                 val b = Notification.Builder(ctx, CH_STATUS_LIVE)
                     .setSmallIcon(smallIcon)
+                    .setColor(accent)
                     .setContentTitle(small(header))
                     .setContentText(small(body))
                     .setUsesChronometer(true)
@@ -282,8 +337,22 @@ object Alarms {
 
                 if (useCustomView && hasTimes) {
                     b.setCustomBigContentView(timesView(ctx, cells, currentIdx, kerahatText))
+                } else if (AppSettings.isSamsung()) {
+                    // Samsung One UI 8 Now Bar & Live Notifications promote ProgressStyle progress trackers.
+                    val prevAt = if (currentIdx >= 0) LocalDateTime.of(now.toLocalDate(), rows[currentIdx].value)
+                    else next.at.minusHours(6)
+                    val totalSec = Duration.between(prevAt, next.at).seconds.coerceAtLeast(1)
+                    val elapsedSec = Duration.between(prevAt, now).seconds.coerceIn(0, totalSec)
+                    val pct = ((elapsedSec * 100L) / totalSec).toInt().coerceIn(0, 100)
+                    val ps = Notification.ProgressStyle()
+                        .addProgressSegment(Notification.ProgressStyle.Segment(100).setColor(accent))
+                        .setProgress(pct)
+                        .setStyledByProgress(true)
+                    b.setStyle(ps)
+                    if (hasTimes) {
+                        b.setSubText(cells.take(6).joinToString(" · ") { (n, t) -> "${n.take(3)} $t" })
+                    }
                 } else if (hasTimes) {
-                    val accent = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
                     val dimName = 0xB3FFFFFF.toInt()
                     val dm = ctx.resources.displayMetrics
                     val density = dm.density
@@ -431,6 +500,8 @@ object Alarms {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         if (!AppSettings.bool(ctx, "notif_on")) {
             nm.cancel(NOTIF_STATUS)
+            nm.cancel(NOTIF_PEEK)
+            nm.cancel(NOTIF_LIVE)
             try {
                 ctx.stopService(Intent(ctx, CountdownService::class.java))
             } catch (_: Exception) {}
@@ -439,7 +510,14 @@ object Alarms {
         // Re-arm the minute tick first so a rendering failure can't stop the background refresh chain.
         scheduleTick(ctx)
         val n = buildStatusNotification(ctx)
-        nm.notify(NOTIF_STATUS, n)
+        if (n.channelId == CH_STATUS_LIVE) {
+            nm.cancel(NOTIF_STATUS)
+            nm.cancel(NOTIF_PEEK)
+            nm.notify(NOTIF_LIVE, n)
+        } else {
+            nm.cancel(NOTIF_LIVE)
+            nm.notify(NOTIF_STATUS, n)
+        }
         CountdownService.ensureRunning(ctx)
     }
 
@@ -472,7 +550,7 @@ object Alarms {
     }
 
     /** Renders the current astronomical synodic lunar phase as a monochrome notification icon. */
-    private fun moonPhaseIcon(): Bitmap {
+    fun moonPhaseIcon(): Bitmap {
         val size = 96
         val cx = size / 2f
         val cy = size / 2f
@@ -537,6 +615,7 @@ object Alarms {
             val adhanIcon = if (moonBmp != null) Icon.createWithBitmap(moonBmp) else Icon.createWithResource(ctx, R.drawable.ic_notification)
             Notification.Builder(ctx, ch)
                 .setSmallIcon(adhanIcon)
+                .setColor(AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB))
                 .setContentTitle(c.getString(R.string.adhan_title, label))
                 .setContentText(text)
                 .setStyle(Notification.BigTextStyle().bigText(text))
@@ -812,7 +891,8 @@ class CountdownService : Service() {
             }
             val interactive = getSystemService(android.os.PowerManager::class.java).isInteractive
             if (!interactive) return
-            Alarms.updateStatus(this@CountdownService)
+            if (Alarms.appInForeground) Alarms.triggerRestingPeek(this@CountdownService, autoHide = false)
+            else Alarms.updateStatus(this@CountdownService)
             PrayerWidget.refreshAll(this@CountdownService)
             val delayMs = 60_000L - (System.currentTimeMillis() % 60_000L) + 50L
             handler.postDelayed(this, delayMs)
@@ -823,6 +903,7 @@ class CountdownService : Service() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_SCREEN_OFF) {
                 handler.removeCallbacks(minuteTicker)
+                Alarms.cancelRestingPeek(context)
                 Alarms.updateStatus(context)
                 return
             }
@@ -833,7 +914,11 @@ class CountdownService : Service() {
                 val delayMs = 60_000L - (System.currentTimeMillis() % 60_000L) + 50L
                 handler.postDelayed(minuteTicker, delayMs)
             }
-            Alarms.updateStatus(context)
+            if (intent.action == Intent.ACTION_USER_PRESENT) {
+                Alarms.triggerRestingPeek(context, autoHide = !Alarms.appInForeground)
+            } else {
+                Alarms.updateStatus(context)
+            }
             PrayerWidget.refreshAll(context)
         }
     }
@@ -849,7 +934,7 @@ class CountdownService : Service() {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_USER_PRESENT)
         }
-        ContextCompat.registerReceiver(this, timeTickReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(this, timeTickReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
         if (getSystemService(android.os.PowerManager::class.java).isInteractive) {
             val delayMs = 60_000L - (System.currentTimeMillis() % 60_000L) + 50L
             handler.postDelayed(minuteTicker, delayMs)
@@ -865,11 +950,12 @@ class CountdownService : Service() {
         }
         Alarms.createChannels(this)
         val notif = Alarms.buildStatusNotification(this)
+        val notifId = if (notif.channelId == Alarms.CH_STATUS_LIVE) Alarms.NOTIF_LIVE else Alarms.NOTIF_STATUS
         try {
             if (Build.VERSION.SDK_INT >= 34) {
-                startForeground(Alarms.NOTIF_STATUS, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                startForeground(notifId, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             } else {
-                startForeground(Alarms.NOTIF_STATUS, notif)
+                startForeground(notifId, notif)
             }
         } catch (_: Exception) {}
         return START_STICKY
@@ -877,9 +963,14 @@ class CountdownService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
+        Alarms.appInForeground = false
         if (AppSettings.bool(this, "notif_on")) {
             Alarms.scheduleTick(this)
-            Alarms.updateStatus(this)
+            if (getSystemService(android.os.PowerManager::class.java).isInteractive) {
+                Alarms.triggerRestingPeek(this, autoHide = true)
+            } else {
+                Alarms.updateStatus(this)
+            }
         }
     }
 

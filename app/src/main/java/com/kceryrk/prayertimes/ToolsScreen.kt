@@ -223,31 +223,30 @@ fun ZikirScreen() {
             }
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
+                GlassSecondaryButton(
+                    text = stringResource(R.string.zikir_reset),
                     onClick = { count = 0; persist() },
                     shape = CircleShape,
                     modifier = Modifier.weight(1f).height(48.dp)
-                ) {
-                    Text(stringResource(R.string.zikir_reset))
-                }
-                Button(
+                )
+                GlassPrimaryButton(
+                    text = stringResource(R.string.zikir_save),
+                    accent = Color(AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)),
                     onClick = { archive(); persist() },
                     shape = CircleShape,
                     modifier = Modifier.weight(1f).height(48.dp)
-                ) {
-                    Text(stringResource(R.string.zikir_save))
-                }
+                )
             }
             if (history.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.zikir_history), style = MaterialTheme.typography.titleMedium)
-                    OutlinedButton(
+                    GlassSecondaryButton(
+                        text = stringResource(R.string.zikir_clear),
                         onClick = { history = emptyList(); saveHistory(prefs, history) },
-                        shape = CircleShape
-                    ) {
-                        Text(stringResource(R.string.zikir_clear))
-                    }
+                        shape = CircleShape,
+                        modifier = Modifier.height(38.dp)
+                    )
                 }
                 val fmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
                 Text(
@@ -431,9 +430,12 @@ private fun QadaScreen() {
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(Modifier.height(12.dp))
-        OutlinedButton(onClick = { prayers.forEach { set(it, 0) } }) {
-            Text(stringResource(R.string.qada_reset))
-        }
+        GlassSecondaryButton(
+            text = stringResource(R.string.qada_reset),
+            onClick = { prayers.forEach { set(it, 0) } },
+            shape = CircleShape,
+            modifier = Modifier.height(44.dp)
+        )
     }
 }
 

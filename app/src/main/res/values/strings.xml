@@ -45,6 +45,8 @@
     <string name="widget_list_desc">Next prayer with all times as a list</string>
     <string name="widget_grid_desc">Next prayer with all times as a grid</string>
     <string name="widget_ring_desc">Countdown ring with all times</string>
+    <string name="widget_countdown_label">Countdown</string>
+    <string name="widget_countdown_desc">Compact resizable countdown to the next prayer</string>
     <string name="settings">Settings</string>
     <string name="sec_general">General</string>
     <string name="sec_appearance">Appearance</string>
@@ -76,7 +78,9 @@
     <string name="notif_on">Show permanent notification</string>
     <string name="notif_times">Show today\'s times</string>
     <string name="real_moon_icon">Moon icon follows real moon phase</string>
-    <string name="legacy_notif">Legacy notification</string>
+    <string name="new_notif_style">New notification style</string>
+    <string name="new_notif_style_desc">Best on HyperOS 3.1+</string>
+    <string name="beta_label">Beta</string>
     <string name="island_live">Live countdown on Dynamic Island</string>
     <string name="island_adhan">Prayer time alert on Dynamic Island</string>
     <string name="notif_hide_lockscreen">Hide countdown on lock screen &amp; AOD</string>
@@ -84,6 +88,17 @@
     <string name="island_vakit">Dynamic Island prayer</string>
     <string name="island_vakit_next">Next prayer</string>
     <string name="island_vakit_current">Current prayer</string>
+    <string name="group_live_settings">Live Updates</string>
+    <string name="live_update_on">Live countdown notification</string>
+    <string name="live_update_adhan">Live alert at prayer time</string>
+    <string name="live_update_vakit">Live countdown prayer</string>
+    <string name="resting_live_mode">Resting state live notification</string>
+    <string name="resting_island_mode">Resting state Dynamic Island</string>
+    <string name="resting_island_always">Show always</string>
+    <string name="resting_island_never">Hide always</string>
+    <string name="resting_island_timeout">Hide after delay</string>
+    <string name="resting_island_sec">Hide after</string>
+    <string name="sec_short">s</string>
     <string name="kerahat_setting">Kerahat vakti (makruh times)</string>
     <string name="kerahat_active">Kerahat vakti</string>
     <string name="kerahat_minutes">Kerahat duration</string>
@@ -225,6 +240,7 @@
     <string name="welcome_subtitle">Accurate prayer times, live countdowns, and a calm daily companion designed without ads.</string>
     <string name="welcome_feat1_title">Live Countdowns &amp; Widgets</string>
     <string name="welcome_feat1_desc">Always know how much time remains on your home screen and Dynamic Island.</string>
+    <string name="welcome_feat1_desc_live">Always know how much time remains on your home screen and live status bar pill.</string>
     <string name="welcome_feat2_title">Smart Alarms &amp; Kerahat</string>
     <string name="welcome_feat2_desc">Adhan alerts, custom sounds, auto-silence during prayer, and kerahat reminders.</string>
     <string name="welcome_feat3_title">Qibla, Qada &amp; Zikir</string>
@@ -237,6 +253,15 @@
     <string name="setup_perms_title">Permissions</string>
     <string name="setup_prefs_title">Quick Preferences</string>
     <string name="setup_grant_gps">Grant Location Permission &amp; Detect</string>
+    <string name="setup_detect_gps">Detect Location</string>
+    <string name="setup_loc_perm_needed">Location permission is needed to detect your city</string>
     <string name="setup_detecting">Detecting location…</string>
     <string name="setup_finish">Finish Setup</string>
+    <string name="perm_notif_desc">Shows the ongoing prayer countdown and delivers adhan &amp; kerahat alerts</string>
+    <string name="perm_exact_desc">Ensures adhan, kerahat, and sahur alarms ring on the exact minute even in battery saver</string>
+    <string name="perm_dnd_desc">Lets the app automatically silence your phone during prayer times and Friday prayer</string>
+    <string name="perm_island_title">Live Updates / Dynamic Island</string>
+    <string name="perm_island_desc">Displays the live countdown pill on your status bar and Dynamic Island</string>
+    <string name="perm_live_title">Live Updates</string>
+    <string name="perm_live_desc">Displays the live countdown pill on your status bar and lock screen</string>
 </resources>

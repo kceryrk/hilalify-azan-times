@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +22,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -191,29 +198,40 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 textAlign = TextAlign.Center
             )
             val current = AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                maxItemsInEachRow = 6,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf(0xFF00A86B, 0xFF0A84FF, 0xFFFF375F, 0xFFFF9F0A, 0xFFBF5AF2, 0xFF64D2FF).forEach { argb ->
+                ACCENT_COLORS.forEach { argb ->
                     val value = argb.toInt()
                     val selected = value == current
                     Box(
                         Modifier
-                            .size(if (selected) 46.dp else 36.dp)
-                            .clip(CircleShape)
-                            .background(Color(value))
-                            .border(
-                                if (selected) 3.dp else 0.dp,
-                                if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                                CircleShape
-                            )
-                            .clickable {
+                            .size(44.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
                                 AppSettings.put(ctx, "accent", value)
                                 onRecreate()
-                            }
-                    )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            Modifier
+                                .size(if (selected) 42.dp else 34.dp)
+                                .clip(CircleShape)
+                                .background(Color(value))
+                                .border(
+                                    if (selected) 3.dp else 0.dp,
+                                    if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                    CircleShape
+                                )
+                        )
+                    }
                 }
             }
         }
@@ -379,11 +397,14 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
         }
 
         Section(R.string.sec_notif) {
+            var notifOn by remember { mutableStateOf(AppSettings.bool(ctx, "notif_on", def = true)) }
+            var newNotifStyle by remember {
+                mutableStateOf(AppSettings.bool(ctx, "new_notif_style", def = AppSettings.isHyperOs3Plus()))
+            }
             GroupDialogRow(
                 title = stringResource(R.string.group_notif_settings),
                 subtitle = stringResource(R.string.notif_on)
             ) {
-                var notifOn by remember { mutableStateOf(AppSettings.bool(ctx, "notif_on", def = true)) }
                 SwitchRow(stringResource(R.string.notif_on), null, notifOn) {
                     notifOn = it
                     AppSettings.put(ctx, "notif_on", it)
@@ -393,12 +414,70 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                     RowDivider()
                     PrefSwitch(stringResource(R.string.notif_times), "notif_times") { Alarms.updateStatus(ctx) }
                     RowDivider()
-                    PrefSwitch(stringResource(R.string.real_moon_icon), "real_moon_icon", def = true) {
-                        Alarms.updateStatus(ctx)
+                    var realMoon by remember { mutableStateOf(AppSettings.bool(ctx, "real_moon_icon", def = true)) }
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RealMoonPreview(realMoon)
+                        Spacer(Modifier.width(12.dp))
+                        Text(stringResource(R.string.real_moon_icon), Modifier.weight(1f).padding(end = 8.dp), style = MaterialTheme.typography.bodyLarge)
+                        IosSwitch(checked = realMoon) {
+                            realMoon = it
+                            AppSettings.put(ctx, "real_moon_icon", it)
+                            Alarms.updateStatus(ctx)
+                        }
                     }
                     RowDivider()
-                    PrefSwitch(stringResource(R.string.legacy_notif), "legacy_notif", def = false) {
-                        Alarms.updateStatus(ctx)
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                newNotifStyle = !newNotifStyle
+                                AppSettings.put(ctx, "new_notif_style", newNotifStyle)
+                                if (newNotifStyle) Alarms.triggerRestingPeek(ctx, autoHide = !Alarms.appInForeground)
+                                else {
+                                    Alarms.cancelRestingPeek(ctx)
+                                    Alarms.updateStatus(ctx)
+                                }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(stringResource(R.string.new_notif_style), style = MaterialTheme.typography.bodyLarge)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.beta_label),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            Text(
+                                stringResource(R.string.new_notif_style_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IosSwitch(
+                            checked = newNotifStyle,
+                            onCheckedChange = {
+                                newNotifStyle = it
+                                AppSettings.put(ctx, "new_notif_style", it)
+                                if (it) Alarms.triggerRestingPeek(ctx, autoHide = !Alarms.appInForeground)
+                                else {
+                                    Alarms.cancelRestingPeek(ctx)
+                                    Alarms.updateStatus(ctx)
+                                }
+                            }
+                        )
                     }
                     RowDivider()
                     PrefSwitch(stringResource(R.string.notif_hide_lockscreen), "notif_hide_lockscreen", def = false) {
@@ -408,30 +487,99 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 RowDivider()
                 PrefSwitch(stringResource(R.string.adhan_hide_lockscreen), "adhan_hide_lockscreen", def = false) {}
             }
-            if (android.os.Build.VERSION.SDK_INT >= 36) {
+            if (android.os.Build.VERSION.SDK_INT >= 36 && notifOn && newNotifStyle) {
                 RowDivider()
-                var islandLive by remember { mutableStateOf(AppSettings.bool(ctx, "island_live", def = true)) }
-                SwitchRow(stringResource(R.string.island_live), null, islandLive) {
-                    islandLive = it
-                    AppSettings.put(ctx, "island_live", it)
-                    Alarms.updateStatus(ctx)
-                }
-                if (islandLive) {
-                    RowDivider()
-                    PrefChoice(
-                        stringResource(R.string.island_vakit),
-                        AppSettings.str(ctx, "island_vakit", "current"),
-                        listOf(
-                            Choice("next", R.string.island_vakit_next),
-                            Choice("current", R.string.island_vakit_current),
-                        )
-                    ) {
-                        AppSettings.put(ctx, "island_vakit", it)
-                        Alarms.updateStatus(ctx)
+                GroupDialogRow(
+                    title = islandStr(R.string.group_island_settings, R.string.group_live_settings),
+                    subtitle = islandStr(R.string.island_live, R.string.live_update_on)
+                ) {
+                    var islandLive by remember { mutableStateOf(AppSettings.bool(ctx, "island_live", def = true)) }
+                    SwitchRow(islandStr(R.string.island_live, R.string.live_update_on), null, islandLive) {
+                        islandLive = it
+                        AppSettings.put(ctx, "island_live", it)
+                        if (it) Alarms.triggerRestingPeek(ctx, autoHide = !Alarms.appInForeground)
+                        else {
+                            Alarms.cancelRestingPeek(ctx)
+                            Alarms.updateStatus(ctx)
+                        }
                     }
+                    if (islandLive) {
+                        RowDivider()
+                        var islandVakit by remember {
+                            mutableStateOf(AppSettings.str(ctx, "island_vakit", "current"))
+                        }
+                        InlineChoiceGroup(
+                            islandStr(R.string.island_vakit, R.string.live_update_vakit),
+                            islandVakit,
+                            listOf(
+                                Choice("next", R.string.island_vakit_next),
+                                Choice("current", R.string.island_vakit_current),
+                            )
+                        ) {
+                            islandVakit = it
+                            AppSettings.put(ctx, "island_vakit", it)
+                            Alarms.triggerRestingPeek(ctx, autoHide = !Alarms.appInForeground)
+                        }
+                        RowDivider()
+                        var restingMode by remember {
+                            mutableStateOf(AppSettings.str(ctx, "resting_island_mode", "timeout"))
+                        }
+                        InlineChoiceGroup(
+                            islandStr(R.string.resting_island_mode, R.string.resting_live_mode),
+                            restingMode,
+                            listOf(
+                                Choice("always", R.string.resting_island_always),
+                                Choice("timeout", R.string.resting_island_timeout),
+                                Choice("never", R.string.resting_island_never),
+                            )
+                        ) {
+                            restingMode = it
+                            AppSettings.put(ctx, "resting_island_mode", it)
+                            if (it == "timeout") Alarms.triggerRestingPeek(ctx, autoHide = !Alarms.appInForeground)
+                            else {
+                                Alarms.cancelRestingPeek(ctx)
+                                Alarms.updateStatus(ctx)
+                            }
+                        }
+                        if (restingMode == "timeout") {
+                            var restingSec by remember {
+                                mutableFloatStateOf(AppSettings.int(ctx, "resting_island_sec", 5).coerceIn(2, 30).toFloat())
+                            }
+                            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        stringResource(R.string.resting_island_sec),
+                                        Modifier.weight(1f).padding(end = 8.dp),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Text(
+                                        "${restingSec.roundToInt()} ${stringResource(R.string.sec_short)}",
+                                        Modifier.widthIn(min = 56.dp),
+                                        textAlign = TextAlign.End,
+                                        maxLines = 1,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                                Slider(
+                                    value = restingSec,
+                                    onValueChange = { restingSec = it.roundToInt().coerceIn(2, 30).toFloat() },
+                                    valueRange = 2f..30f,
+                                    steps = 27,
+                                    onValueChangeFinished = {
+                                        AppSettings.put(ctx, "resting_island_sec", restingSec.roundToInt())
+                                        Alarms.triggerRestingPeek(ctx, autoHide = !Alarms.appInForeground)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    RowDivider()
+                    PrefSwitch(islandStr(R.string.island_adhan, R.string.live_update_adhan), "island_adhan", def = true) {}
                 }
+            } else if (android.os.Build.VERSION.SDK_INT >= 36) {
                 RowDivider()
-                PrefSwitch(stringResource(R.string.island_adhan), "island_adhan", def = true) {}
+                PrefSwitch(islandStr(R.string.island_adhan, R.string.live_update_adhan), "island_adhan", def = true) {}
             }
             RowDivider()
             GroupDialogRow(
@@ -628,7 +776,7 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 if (android.os.Build.VERSION.SDK_INT >= 36) {
                     val promotedGranted = remember(tick) { canPromotedNotifs(ctx) }
                     RowDivider()
-                    PermissionRow("Live Updates / Dynamic Island", promotedGranted) {
+                    PermissionRow(islandStr(R.string.perm_island_title, R.string.perm_live_title), promotedGranted) {
                         val intent = Intent("android.settings.APP_NOTIFICATION_PROMOTION_SETTINGS")
                             .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -665,12 +813,14 @@ fun SettingsScreen(onGpsToggle: (Boolean) -> Unit, onCity: () -> Unit, onRecreat
                 Spacer(Modifier.height(12.dp))
                 Text(stringResource(R.string.kofi_desc), style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(8.dp))
-                Button(
+                GlassPrimaryButton(
+                    text = stringResource(R.string.kofi),
+                    accent = Color(AppSettings.int(ctx, "accent", DEFAULT_ACCENT_ARGB)),
                     onClick = {
                         ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://ko-fi.com/kaecr")))
                     },
-                    Modifier.fillMaxWidth()
-                ) { Text(stringResource(R.string.kofi)) }
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                )
             }
         }
     }
@@ -850,6 +1000,63 @@ private fun Section(title: Int, content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
+internal fun islandStr(hyperOsRes: Int, genericRes: Int): String =
+    stringResource(if (remember { AppSettings.isHyperOs() }) hyperOsRes else genericRes)
+
+@Composable
+private fun InlineChoiceGroup(title: String, value: String, choices: List<Choice>, onPick: (String) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            title,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        choices.forEach { ch ->
+            val selected = ch.value == value
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { onPick(ch.value) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(selected = selected, onClick = { onPick(ch.value) })
+                Text(stringResource(ch.labelRes), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
+
+@Composable
+internal fun RealMoonPreview(realMoon: Boolean) {
+    val moonBmp = remember { Alarms.moonPhaseIcon().asImageBitmap() }
+    Box(
+        Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .background(Color(0xFF1C1C1E))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        if (realMoon) {
+            Image(
+                bitmap = moonBmp,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+        } else {
+            Image(
+                painter = painterResource(R.drawable.ic_notification),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(Color.White),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         Modifier
@@ -869,7 +1076,7 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChan
 
 /** Flat iOS-style pill toggle: accent-coloured track when on, white pill thumb that slides between the states. */
 @Composable
-private fun IosSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+internal fun IosSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     val progress by animateFloatAsState(if (checked) 1f else 0f, label = "ios-switch")
     val accent = Color(AppSettings.int(LocalContext.current, "accent", DEFAULT_ACCENT_ARGB))
     val track = lerp(Color(0xFF39393D), accent, progress)

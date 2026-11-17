@@ -45,6 +45,8 @@
     <string name="widget_list_desc">Sonraki vakit ve tüm vakitler liste olarak</string>
     <string name="widget_grid_desc">Sonraki vakit ve tüm vakitler ızgara olarak</string>
     <string name="widget_ring_desc">Geri sayım halkası ve tüm vakitler</string>
+    <string name="widget_countdown_label">Geri sayım</string>
+    <string name="widget_countdown_desc">Sonraki vakte kompakt yeniden boyutlandırılabilir geri sayım</string>
     <string name="settings">Ayarlar</string>
     <string name="sec_general">Genel</string>
     <string name="sec_appearance">Görünüm</string>
@@ -76,7 +78,9 @@
     <string name="notif_on">Kalıcı bildirimi göster</string>
     <string name="notif_times">Bugünkü vakitleri göster</string>
     <string name="real_moon_icon">Ay simgesi gerçek ay evresini takip etsin</string>
-    <string name="legacy_notif">Eski stil bildirim</string>
+    <string name="new_notif_style">Yeni bildirim stili</string>
+    <string name="new_notif_style_desc">En iyi HyperOS 3.1+ üzerinde çalışır</string>
+    <string name="beta_label">Beta</string>
     <string name="island_live">Dinamik Ada\'da canlı geri sayım</string>
     <string name="island_adhan">Vakit girdiğinde Dinamik Ada bildirimi</string>
     <string name="notif_hide_lockscreen">Geri sayımı kilit ekranı ve AOD\'de gizle</string>
@@ -84,6 +88,17 @@
     <string name="island_vakit">Dinamik Ada vakti</string>
     <string name="island_vakit_next">Sonraki vakit</string>
     <string name="island_vakit_current">Şu anki vakit</string>
+    <string name="group_live_settings">Canlı Güncellemeler</string>
+    <string name="live_update_on">Canlı geri sayım bildirimi</string>
+    <string name="live_update_adhan">Vakit girdiğinde canlı uyarı</string>
+    <string name="live_update_vakit">Canlı bildirim vakti</string>
+    <string name="resting_live_mode">Dinlenme durumu canlı bildirimi</string>
+    <string name="resting_island_mode">Dinlenme durumu Dinamik Ada</string>
+    <string name="resting_island_always">Her zaman göster</string>
+    <string name="resting_island_never">Her zaman gizle</string>
+    <string name="resting_island_timeout">Belirli süre sonra gizle</string>
+    <string name="resting_island_sec">Gizleme süresi</string>
+    <string name="sec_short">sn</string>
     <string name="kerahat_setting">Kerahat vakti (makruh vakitler)</string>
     <string name="kerahat_active">Kerahat vakti</string>
     <string name="kerahat_minutes">Kerahat süresi</string>
@@ -191,6 +206,7 @@
     <string name="welcome_subtitle">Doğru namaz vakitleri, canlı geri sayımlar ve reklamsız sade bir günlük yol arkadaşı.</string>
     <string name="welcome_feat1_title">Canlı Geri Sayım ve Widget\'lar</string>
     <string name="welcome_feat1_desc">Kalan süreyi ana ekranınızda ve Dinamik Ada\'da her an görün.</string>
+    <string name="welcome_feat1_desc_live">Kalan süreyi ana ekranınızda ve canlı durum çubuğunuzda her an görün.</string>
     <string name="welcome_feat2_title">Akıllı Alarmlar ve Kerahat</string>
     <string name="welcome_feat2_desc">Ezan bildirimleri, özel sesler, namazda otomatik sessiz ve kerahat uyarıları.</string>
     <string name="welcome_feat3_title">Kıble, Kaza ve Zikirmatik</string>
@@ -203,6 +219,15 @@
     <string name="setup_perms_title">İzinler</string>
     <string name="setup_prefs_title">Hızlı Tercihler</string>
     <string name="setup_grant_gps">Konum İzni Ver ve Algıla</string>
+    <string name="setup_detect_gps">Konumu Algıla</string>
+    <string name="setup_loc_perm_needed">Şehrinizi algılamak için konum izni gerekli</string>
     <string name="setup_detecting">Konum algılanıyor…</string>
     <string name="setup_finish">Kurulumu Tamamla</string>
+    <string name="perm_notif_desc">Devam eden vakit geri sayımını gösterir ve ezan ile kerahat uyarılarını iletir</string>
+    <string name="perm_exact_desc">Pil tasarrufu açıkken bile ezan, kerahat ve sahur alarmlarının tam dakikasında çalmasını sağlar</string>
+    <string name="perm_dnd_desc">Namaz vakitlerinde ve Cuma namazında telefonunuzu otomatik sessize almaya izin verir</string>
+    <string name="perm_island_title">Canlı Güncellemeler / Dinamik Ada</string>
+    <string name="perm_island_desc">Durum çubuğunuzda ve Dinamik Ada\'da canlı geri sayım kapsülünü gösterir</string>
+    <string name="perm_live_title">Canlı Güncellemeler</string>
+    <string name="perm_live_desc">Durum çubuğunuzda ve kilit ekranınızda canlı geri sayım kapsülünü gösterir</string>
 </resources>

@@ -24,7 +24,7 @@
         android:orientation="vertical"
         android:padding="10dp">
 
-        <TextView
+        <TextView android:fontFamily="@font/outfit_bold"
             android:id="@+id/opt_count"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -34,7 +34,7 @@
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <TextView
+        <TextView android:fontFamily="@font/outfit_regular"
             android:id="@+id/opt_next"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -54,22 +54,22 @@
                 <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="2dp">
                     <ImageView android:id="@+id/opt_tb0" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" />
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical">
-                        <TextView android:id="@+id/opt_l0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
-                        <TextView android:id="@+id/opt_t0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
+                        <TextView android:fontFamily="@font/outfit_regular" android:id="@+id/opt_l0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
+                        <TextView android:fontFamily="@font/outfit_bold" android:id="@+id/opt_t0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
                     </LinearLayout>
                 </FrameLayout>
                 <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="2dp">
                     <ImageView android:id="@+id/opt_tb1" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" />
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical">
-                        <TextView android:id="@+id/opt_l1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
-                        <TextView android:id="@+id/opt_t1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
+                        <TextView android:fontFamily="@font/outfit_regular" android:id="@+id/opt_l1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
+                        <TextView android:fontFamily="@font/outfit_bold" android:id="@+id/opt_t1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
                     </LinearLayout>
                 </FrameLayout>
                 <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="2dp">
                     <ImageView android:id="@+id/opt_tb2" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" />
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical">
-                        <TextView android:id="@+id/opt_l2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
-                        <TextView android:id="@+id/opt_t2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
+                        <TextView android:fontFamily="@font/outfit_regular" android:id="@+id/opt_l2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
+                        <TextView android:fontFamily="@font/outfit_bold" android:id="@+id/opt_t2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
                     </LinearLayout>
                 </FrameLayout>
             </LinearLayout>
@@ -77,22 +77,22 @@
                 <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="2dp">
                     <ImageView android:id="@+id/opt_tb3" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" />
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical">
-                        <TextView android:id="@+id/opt_l3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
-                        <TextView android:id="@+id/opt_t3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
+                        <TextView android:fontFamily="@font/outfit_regular" android:id="@+id/opt_l3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
+                        <TextView android:fontFamily="@font/outfit_bold" android:id="@+id/opt_t3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
                     </LinearLayout>
                 </FrameLayout>
                 <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="2dp">
                     <ImageView android:id="@+id/opt_tb4" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" />
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical">
-                        <TextView android:id="@+id/opt_l4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
-                        <TextView android:id="@+id/opt_t4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
+                        <TextView android:fontFamily="@font/outfit_regular" android:id="@+id/opt_l4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
+                        <TextView android:fontFamily="@font/outfit_bold" android:id="@+id/opt_t4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
                     </LinearLayout>
                 </FrameLayout>
                 <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="2dp">
                     <ImageView android:id="@+id/opt_tb5" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" />
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical">
-                        <TextView android:id="@+id/opt_l5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
-                        <TextView android:id="@+id/opt_t5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
+                        <TextView android:fontFamily="@font/outfit_regular" android:id="@+id/opt_l5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="9.5sp" />
+                        <TextView android:fontFamily="@font/outfit_bold" android:id="@+id/opt_t5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:includeFontPadding="false" android:singleLine="true" android:textSize="12sp" android:textStyle="bold" />
                     </LinearLayout>
                 </FrameLayout>
             </LinearLayout>
